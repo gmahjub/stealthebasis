@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{1f8f3710-4367-4645-963e-f6f9778181a7}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile />
+    <SearchPath />
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="src\root\nested\customLogging\custom_logging.py" />
+    <Compile Include="src\root\nested\dataAccess\data_access_test_cases.py" />
+    <Compile Include="src\root\nested\dataAccess\data_object.py" />
+    <Compile Include="src\root\nested\dataAccess\data_provider_interface.py" />
+    <Compile Include="src\root\nested\dataAccess\quandl_data_object.py" />
+    <Compile Include="src\root\nested\dataAccess\quandl_interface.py" />
+    <Compile Include="src\root\nested\dataAccess\yahoo_data_object.py" />
+    <Compile Include="src\root\nested\interestRateModeling\interest_rates.py" />
+    <Compile Include="src\root\nested\interestRateModeling\test_yield_curve.py" />
+    <Compile Include="src\root\nested\performance_analyzer.py" />
+    <Compile Include="src\root\nested\SysOs\os_mux.py" />
+    <Compile Include="src\root\nested\timeSeriesAnalysis\extendARIMA\arima_module.py" />
+    <Compile Include="src\root\nested\timeSeriesAnalysis\extendARIMA\test.py" />
+    <Compile Include="src\root\nested\timeSeriesAnalysis\extendProphet\prophet_forecaster.py" />
+    <Compile Include="src\root\nested\timeSeriesAnalysis\stationary.py" />
+    <Compile Include="src\root\nested\tsa_test_cases.py" />
+    <Compile Include="src\root\nested\__init__.py" />
+    <Compile Include="src\root\__init__.py" />
+    <Compile Include="src\test.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="src" />
+    <Folder Include="src\root" />
+    <Folder Include="src\root\nested" />
+    <Folder Include="src\root\nested\customLogging" />
+    <Folder Include="src\root\nested\dataAccess" />
+    <Folder Include="src\root\nested\interestRateModeling" />
+    <Folder Include="src\root\nested\SysOs" />
+    <Folder Include="src\root\nested\timeSeriesAnalysis" />
+    <Folder Include="src\root\nested\timeSeriesAnalysis\extendARIMA" />
+    <Folder Include="src\root\nested\timeSeriesAnalysis\extendProphet" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+</Project>
