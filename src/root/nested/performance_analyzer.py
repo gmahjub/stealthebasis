@@ -47,7 +47,8 @@ class PerformanceAnalyzer(object):
     def plot_benchmark_data(self,
                             benchmark_data,
                             title):
-        
+
+        self.logger.info("running plot_benchmark_data function...")
         _ = benchmark_data.plot(subplots = True, title=title)
         plt.show()
     
