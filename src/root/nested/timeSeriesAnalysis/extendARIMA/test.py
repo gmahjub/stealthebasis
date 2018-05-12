@@ -14,16 +14,20 @@ from sklearn.metrics import mean_squared_error
 from matplotlib import pyplot
 from scipy import stats
 
-from root.nested.quandl_data_object import QuandlDataObject
-from root.nested.arima_module import ArimaObject
-from root.nested.arima_module import ArimaOrder
+from quandl_data_object import QuandlDataObject
+#from root.nested.quandl_data_object import QuandlDataObject
+from arima_module import ArimaObject
+#from root.nested.arima_module import ArimaObject
+from arima_module import ArimaOrder
+#from root.nested.arima_module import ArimaOrder
 
 ## put this in to ignore warnings in evaluation of ARIMA
 import warnings
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from math import sqrt
 
-from root.nested.stationary import StationaryObj
+from stationary import StationaryObj
+#from root.nested.stationary import StationaryObj
 
 warnings.filterwarnings("ignore")
 ########################################################

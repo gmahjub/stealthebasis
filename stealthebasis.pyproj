@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{6b736b05-1a6c-477e-977e-44db7b7e0b59}</ProjectGuid>
     <ProjectHome />
-    <StartupFile />
+    <StartupFile>src\root\nested\futures\cont_fut.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -26,6 +26,9 @@
     <Compile Include="src\root\nested\dataAccess\quandl_data_object.py" />
     <Compile Include="src\root\nested\dataAccess\quandl_interface.py" />
     <Compile Include="src\root\nested\dataAccess\yahoo_data_object.py" />
+    <Compile Include="src\root\nested\futures\cont_fut.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\root\nested\interestRateModeling\interest_rates.py" />
     <Compile Include="src\root\nested\interestRateModeling\test_yield_curve.py" />
     <Compile Include="src\root\nested\performance_analyzer.py" />
@@ -46,6 +49,7 @@
     <Folder Include="src\root\nested\customLogging" />
     <Folder Include="src\root\nested\dataAccess" />
     <Folder Include="src\root\nested\interestRateModeling" />
+    <Folder Include="src\root\nested\futures\" />
     <Folder Include="src\root\nested\SysOs" />
     <Folder Include="src\root\nested\timeSeriesAnalysis" />
     <Folder Include="src\root\nested\timeSeriesAnalysis\extendARIMA" />

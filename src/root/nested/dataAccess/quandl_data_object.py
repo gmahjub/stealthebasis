@@ -5,14 +5,17 @@ Created on Dec 1, 2017
 '''
 
 import os
+from quandl_interface import QuandlSymbolInterface
+from data_object import DataObject
+import quandl_interface
 import numpy as np
 import pandas as pd
-from root.nested.quandl_interface import QuandlSymbolInterface
-from root.nested.data_object import DataObject
+#from root.nested.dataAccess.quandl_interface. import QuandlSymbolInterface
+#from root.nested.dataAccess.data_object import DataObject
 import quandl
 from datetime import datetime
 
-from root.nested.os_mux import OSMuxImpl
+from root.nested.SysOps.os_mux import OSMuxImpl
 
 class QuandlDataObject(DataObject):
     

@@ -5,8 +5,10 @@ Created on Nov 21, 2017
 '''
 
 import requests
-from root.nested.data_object import DataObject
-from root.nested.os_mux import OSMuxImpl
+from data_object import DataObject
+#from root.nested.data_object import DataObject
+from os_mux import OSMuxImpl
+#from root.nested.os_mux import OSMuxImpl
 from root.nested import get_logger
 
 class QuandlSymbolInterface(object):

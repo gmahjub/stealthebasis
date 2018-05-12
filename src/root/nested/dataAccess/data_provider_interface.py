@@ -4,7 +4,8 @@ Created on Jan 24, 2018
 @author: ghazy
 '''
 from root.nested import get_logger
-from root.nested.os_mux import OSMuxImpl
+from os_mux import OSMuxImpl
+#from root.nested.os_mux import OSMuxImpl
 import os, requests
 import pandas as pd
 import numpy as np
