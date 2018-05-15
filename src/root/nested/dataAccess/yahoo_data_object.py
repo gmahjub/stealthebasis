@@ -10,9 +10,7 @@ import pandas_datareader.data as web
 import numpy as np
 
 from data_object import DataObject
-#from root.nested.data_object import DataObject
 from os_mux import OSMuxImpl
-#from root.nested.os_mux import OSMuxImpl
 from root.nested import get_logger
 
 class YahooDataObject(DataObject):
