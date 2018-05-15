@@ -15,7 +15,6 @@ from os_mux import OSMuxImpl
 #from root.nested.os_mux import OSMuxImpl
 from root.nested import get_logger
 
-## a class for Yahoo Data Object.
 class YahooDataObject(DataObject):
     
     def __init__(self,
