@@ -5,8 +5,8 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{6b736b05-1a6c-477e-977e-44db7b7e0b59}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>src\root\nested\futures\cont_fut.py</StartupFile>
-    <SearchPath />
+    <StartupFile>src\root\nested\dataAccess\scrape_analyst_actions_briefing_com.py</StartupFile>
+    <SearchPath>src</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
@@ -25,6 +25,9 @@
     <Compile Include="src\root\nested\dataAccess\data_provider_interface.py" />
     <Compile Include="src\root\nested\dataAccess\quandl_data_object.py" />
     <Compile Include="src\root\nested\dataAccess\quandl_interface.py" />
+    <Compile Include="src\root\nested\dataAccess\scrape_analyst_actions_briefing_com.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\root\nested\dataAccess\yahoo_data_object.py" />
     <Compile Include="src\root\nested\futures\cont_fut.py">
       <SubType>Code</SubType>
@@ -48,6 +51,7 @@
     <Folder Include="src\root\nested" />
     <Folder Include="src\root\nested\customLogging" />
     <Folder Include="src\root\nested\dataAccess" />
+    <Folder Include="src\root\nested\dataAccess\webApi\" />
     <Folder Include="src\root\nested\interestRateModeling" />
     <Folder Include="src\root\nested\futures\" />
     <Folder Include="src\root\nested\SysOs" />
