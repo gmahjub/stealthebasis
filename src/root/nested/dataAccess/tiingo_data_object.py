@@ -20,7 +20,7 @@ class TiingoDataObject(DataObject):
         self.start_date = ""
         self.end_date = ""
         self.source = "tiingo"
-        self.api_key = "fe79041d09f197ff3c0d41d83035e0263e332e4b"
+        
 
         for key,value in kwargs.items():
 
