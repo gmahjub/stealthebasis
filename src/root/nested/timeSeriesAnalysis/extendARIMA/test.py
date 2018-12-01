@@ -14,7 +14,7 @@ from sklearn.metrics import mean_squared_error
 from matplotlib import pyplot
 from scipy import stats
 
-from quandl_data_object import QuandlDataObject
+from dataAccess.quandl_data_object import QuandlDataObject
 #from root.nested.quandl_data_object import QuandlDataObject
 from arima_module import ArimaObject
 #from root.nested.arima_module import ArimaObject
@@ -26,7 +26,7 @@ import warnings
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from math import sqrt
 
-from stationary import StationaryObj
+from timeSeriesAnalysis.stationary import StationaryObj
 #from root.nested.stationary import StationaryObj
 
 warnings.filterwarnings("ignore")
@@ -37,11 +37,13 @@ rcParams['figure.figsize'] = 15,6
 
 logger.debug("Created QuandlSymbolInterface object")
 
-def get_quandl_data(my_symbol,
+def get_quandl_data(class_of_data,
+                    my_symbol,
                     file_type):
     
-    qdo = QuandlDataObject(my_symbol,
-                           file_type)
+    qdo = QuandlDataObject(class_of_data,
+                           my_symbol,
+                           local_file_type=file_type)
     
     qdo.set_df(qdo.get_df().asfreq('B').fillna(method='ffill'))
     qdo.df_to_csv()
@@ -481,7 +483,8 @@ def difference_decomposition(timeseries_series, interval=1):
     return np.array(diff)
 
 
-boe_xulerd_data = get_quandl_data('EURO_USD_spot',
+boe_xulerd_data = get_quandl_data("FOREX",
+                                  'EURO_USD_spot',
                                   '.csv')
 pyplot.figure()
 # plot the raw data

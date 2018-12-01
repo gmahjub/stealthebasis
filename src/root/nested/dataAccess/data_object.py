@@ -15,12 +15,14 @@ from datetime import datetime
 
 class DataObject(object):
     
-    def __init__(self,
-                 timeseries_series=None):
+    def __init__(self, **kwargs):
         
         self.logger = get_logger()
         self.logger.info('DataObject.__init__: Got logger object.')
-        self.timeseries_series = timeseries_series
+        try:
+            self.timeseries_series = kwargs[timeseries_series]
+        except NameError:
+            self.timeseries_series = None
         
     def read_xls(self,
                  xls_file):
@@ -192,7 +194,7 @@ class DataObject(object):
             sns.distplot(stocks_df[column], label=column, bins=bins)
         plt.show()
     
-    def redindex(self,
+    def reindex(self,
                  to_index): # to_index is of type DatetimeIndex
         
         return self.timeseries_series.redindex(to_index)
@@ -301,6 +303,9 @@ class DataObject(object):
         
         pdf_data = self.get_from_csv()
         return pdf_data.resample(resample_interval).apply(func)
+
+
+
     
 #if __name__ == '__main__':
     

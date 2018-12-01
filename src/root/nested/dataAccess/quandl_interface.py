@@ -5,9 +5,9 @@ Created on Nov 21, 2017
 '''
 
 import requests
-from data_object import DataObject
+from dataAccess.data_object import DataObject
 #from root.nested.data_object import DataObject
-from os_mux import OSMuxImpl
+from SysOs.os_mux import OSMuxImpl
 #from root.nested.os_mux import OSMuxImpl
 from root.nested import get_logger
 
@@ -17,68 +17,93 @@ class QuandlSymbolInterface(object):
                  new_symbols_dict=None):
         
         self.logger = get_logger()
+
+        self.to_usd_sym_dict = {'AUD_USD_spot' : 'BOE/XUDLADD', # aussie dollar
+                                'CAD_USD_spot' : 'BOE/XUDLCDD', # canadian dollar
+                                'CNY_USD_spot' : 'BOE/XUDLBK73', # yuan (China)
+                                'DKK_USD_spot' : 'BOE/XUDLDKD', # danish krone
+                                'HKD_USD_spot' : 'BOE/XUDLHDD', # hong kong dollar
+                                'HUF_USD_spot' : 'BOE/XUDLBK35', # hungarian forint
+                                'INR_USD_spot' : 'BOE/XUDLBK64', # indian rupee
+                                'JPY_USD_spot' : 'BOE/XUDLJYD', # jp yen
+                                'MYR_USD_spot' : 'BOE/XUDLBK66', # malaysian ringgit
+                                'NZD_USD_spot' : 'BOE/XUDLNDD', # new zealand dollar
+                                'NOK_USD_spot' : 'BOE/XUDLNKD', # norwegian krone
+                                'PLN_USD_spot' : 'BOE/XUDLBK49', # polish zloty
+                                'GBP_USD_spot' : 'BOE/XUDLGBD', # british pound
+                                'RUB_USD_spot' : 'BOE/XUDLBK69', # russian ruble
+                                'SAR_USD_spot' : 'BOE/XUDLSRD', # saudi riyal
+                                'SGD_USD_spot' : 'BOE/XUDLSGD', # singapore dollar
+                                'ZAR_USD_spot' : 'BOE/XUDLZRD', # south african rand
+                                'KRW_USD_spot' : 'BOE/XUDLBK74', # south korean won
+                                'SEK_USD_spot' : 'BOE/XUDLSKD', # swedish krona
+                                'CHF_USD_spot' : 'BOE/XUDLSFD', # swiss franc
+                                'TRY_USD_spot' : 'BOE/XUDLBK75', # turkish lira,
+                                'BRZ_USD_spot' : 'BOE/XUDLB8KL', # brazilian real
+                                'NIS_USD_spot' : 'BOE/XUDLBK65', # israeli shekyl
+                                'CZK_USD_spot' : 'BOE/XUDLBK27', # czech koruna
+                                'EUR_USD_spot' : 'BOE/XUDLERD' # euro
+                                }
+
+        self.to_eur_sym_dict = {'PLN_EUR_spot' : 'BOE/XUDLBK48',
+                                'GBP_EUR_spot' : 'BOE/XUDLSER',
+                                'CZK_EUR_spot' : 'BOE/XUDLBK26',
+                                'JPY_EUR_spot' : 'BOE/XUDLBK63',
+                                'DKK_EUR_spot' : 'BOE/XUDLBK76'
+                                }
+
+        self.to_gbp_sym_dict = {'TRY_GBP_spot' : 'BOE/XUDLBK95', #turkish lira
+                                'NIS_GBP_spot' : 'BOE/XUDLBK78', #israeli shekyl
+                                'DKK_GBP_spot' : 'BOE/XUDLDKS', # danish krone
+                                'CNY_GBP_spot' : 'BOE/XUDLBK89', # china yuan          
+                                'CAD_GBP_spot' : 'BOE/XUDLCDS',  # canadian dollar        
+                                'INR_GBP_spot' : 'BOE/XUDLBK97', # indian rupee          
+                                'SEK_GBP_spot' : 'BOE/XUDLSKS', # swedish krona
+                                'EUR_GBP_spot' : 'BOE/XUDLERS', # euro
+                                'CHF_GBP_spot' : 'BOE/XUDLSFS', # swiss franc
+                                'RUB_GBP_spot' : 'BOE/XUDLBK85', # russian ruble
+                                'NZD_GBP_spot' : 'BOE/XUDLNDS', # new zealand dollar
+                                'SGD_GBP_spot' : 'BOE/XUDLSGS', # singapore dollar
+                                'AUD_GBP_spot' : 'BOE/XUDLADS', # australian dollar
+                                'KRW_GBP_spot' : 'BOE/XUDLBK93', # south korean won
+                                'PLN_GBP_spot' : 'BOE/XUDLBK47' # polish zloty
+                                }
         
-        self.quandl_FOREX_symbols_dict = {'BRZ_REAL_USD_spot' : 'BOE/XUDLB8KL',
-                                          'YUAN_USD_spot' : 'BOE/XUDLBK73',
-                                          'CZK_KORUNA_STERLING_spot' : 'BOE/XUDLBK44',
-                                          'DANISH_KRONE_USD_spot' : 'BOE/XUDLDKD',
-                                          'TKY_LIRA_STERLING_spot' : 'BOE/XUDLBK95',
-                                          'SHEKL_STERLING_spot' : 'BOE/XUDLBK78',
-                                          'PLD_ZLOTY_EURO_spot' : 'BOE/XUDLBK48',
-                                          'DANISH_KRONE_STERLING_spot' : 'BOE/XUDLDKS',
-                                          'RUBLE_USD_spot' : 'BOE/XUDLBK69',
-                                          'TKY_LIRA_USD_spot' : 'BOE/XUDLBK75',
-                                          'HGY_FORNT_USD_spot' : 'BOE/XUDLBK35',
-                                          'SHEKL_USD_spot' : 'BOE/XUDLBK65',
-                                          'YUAN_STERLING_spot' : 'BOE/XUDLBK89',
-                                          'CAD_STERLING_spot' : 'BOE/XUDLCDS',
-                                          'IND_RUPEE_STERLING_spot' : 'BOE/XUDLBK97',
-                                          'STERLING_EURO_spot' : 'BOE/XUDLSER',
-                                          'CZK_KORUNA_EURO_spot' : 'BOE/XUDLBK26',
-                                          'MLY_RINGGIT_USD_spot' : 'BOE/XUDLBK66',
-                                          'SWD_KRONA_STERLING_spot' : 'BOE/XUDLSKS',
-                                          'YEN_EURO_spot' : 'BOE/XUDLBK63',
-                                          'EURO_STERLING_spot' : 'BOE/XUDLERS',
-                                          'AUD_USD_spot' : 'BOE/XUDLADD',
-                                          'EURO_USD_spot' : 'BOE/XUDLERD',
-                                          'STERLING_USD_spot': 'BOE/XUDLGBD',
-                                          'CAD_USD_spot' : 'BOE/XUDLCDD',
-                                          'SUI_FRANC_STERLING_spot' : 'BOE/XUDLSFS',
-                                          'RUBLE_STERLING_spot' : 'BOE/XUDLBK85',
-                                          'NZ_DOLLAR_STERLING_spot' : 'BOE/XUDLNDS',
-                                          'SGD_STERLING_spot' : 'BOE/XUDLSGS',
-                                          'AUD_STERLING_spot' : 'BOE/XUDLADS',
-                                          'DANISH_KRONE_EURO_spot' : 'BOE/XUDLBK76',
-                                          'SK_WON_STERLING_spot' : 'BOE/XUDLBK93',
-                                          'PLD_ZLOTY_STERLING_spot' : 'BOE/XUDLBK47',
-                                          'SGD_USD_spot': 'BOE/XUDLSGD'
-                                          }
+        self.gdp_sym_dict = {'US_QUARTERLY_REAL_GDP_VALUE_SEAS_ADJ':'FRED/GDPC1',
+                             'US_QUARTERLY_REAL_GDP_ANNUAL_RATE_SEAS_ADJ':'FRED/A191RL1Q225SBEA'
+                            }
         
         self.quandl_INTEREST_RATE_symbols_dict = {'US_TGT_FED_FUNDS(UPPER_LIMIT)':'FRED/DFEDTARU',
                                                   'US_EFFECTIVE_FED_FUNDS':'FRED/DFF',
                                                   'US_TREASURY_YIELD_CURVE':'USTREASURY/YIELD'
-                                                  }
-        
-        self.quandl_FED_FORECAST_symbols_dict = {'US_10YR_TRY_BOND_MEDIAN_VALUES_FORECAST': 'FRBP/TBOND_MD'
                                                  }
         
-        self.quandl_ECONOMIC_INDICATORS_SEAS_ADJ_symbols_dict = {'US_CPI_U_ALL_SEAS_ADJ': 'FRED/CPIAUCSL',
-                                                'US_CPI_U_ALL_MINUS_FOOD_ENERGY_SEAS_ADJ': 'FRED/CPILFESL',
-                                                'US_CPI_U_HOUSING_SEAS_ADJ': 'BLSI/CUSR0000SAH',
-                                                'US_CPI_U_COMMODITIES_SEAS_ADJ': 'BLSI/CUSR0000SAC',
-                                                'US_CPI_U_ENERGY_SEAS_ADJ': 'BLSI/CUSR0000SA0E',
-                                                'US_CPI_U_ELECTRICITY_SEAS_ADJ': 'BLSI/CUSR0000SEHF01',
-                                                'US_CPI_U_FOOD_BEVERAGES_SEAS_ADJ': 'BLSI/CUSR0000SAF',
-                                                'US_CPI_U_PUBLIC_TRANS_SEAS_ADJ': 'BLSI/CUSR0000SETG',
-                                                'US_CPI_U_AIRLINE_FARE_SEAS_ADJ': 'BLSI/CUSR0000SETG01',
-                                                'US_CPI_U_GASOLINE_SEAS_ADJ': 'BLSI/CUSR0000SETB01',
-                                                'US_CPI_U_UTILITIES_PUBLIC_TRANS_SEAS_ADJ': 'BLSI/CUSR0000SAS24',
-                                                'US_CPI_U_MEDIAN_PCT_CHANGE_SEAS_ADJ':'MEDCPIM157SFRBCLE',
-                                                'US_CPI_U_MEDIAN_ANNUALIZED_PCT_CHANGE_SEAS_ADJ':'FRED/MEDCPIM158SFRBCLE',
-                                                'US_CPI_U_MEDIAN_Y_OVER_Y_PCT_CHANGE_SEAS_ADJ':'FRED/MEDCPIM157SFRBCLE',
-                                                'US_PCE_ANNUAL_RATE_SEAS_ADJ':'FRED/PCE',
-                                                'US_REAL_PCE_ANNUAL_RATE_SEAS_ADJ':'FRED/PCEC96',
-                                                'US_PCE_CORE_MINUS_FOOD_ENERGY_SEAS_ADJ': 'FRED/PCEPILFE',
+        self.quandl_FED_FORECAST_symbols_dict = {'US_10YR_TRY_BOND_MEDIAN_VALUES_FORECAST': 'FRBP/TBOND_MD'
+                                                }
+        
+        self.cpi_deflator_sym_dict = {'US_CPI_U_ALL_SEAS_ADJ': 'FRED/CPIAUCSL',
+                                      'US_CPI_U_ALL_MINUS_FOOD_ENERGY_SEAS_ADJ': 'FRED/CPILFESL',
+                                      'US_CPI_U_HOUSING_SEAS_ADJ': 'BLSI/CUSR0000SAH',
+                                      'US_CPI_U_COMMODITIES_SEAS_ADJ': 'BLSI/CUSR0000SAC',
+                                      'US_CPI_U_ENERGY_SEAS_ADJ': 'BLSI/CUSR0000SA0E',
+                                      'US_CPI_U_ELECTRICITY_SEAS_ADJ': 'BLSI/CUSR0000SEHF01',
+                                      'US_CPI_U_FOOD_BEVERAGES_SEAS_ADJ': 'BLSI/CUSR0000SAF',
+                                      'US_CPI_U_PUBLIC_TRANS_SEAS_ADJ': 'BLSI/CUSR0000SETG',
+                                      'US_CPI_U_AIRLINE_FARE_SEAS_ADJ': 'BLSI/CUSR0000SETG01',
+                                      'US_CPI_U_GASOLINE_SEAS_ADJ': 'BLSI/CUSR0000SETB01',
+                                      'US_CPI_U_UTILITIES_PUBLIC_TRANS_SEAS_ADJ': 'BLSI/CUSR0000SAS24',
+                                      'US_CPI_U_MEDIAN_PCT_CHANGE_SEAS_ADJ':'MEDCPIM157SFRBCLE',
+                                      'US_CPI_U_MEDIAN_ANNUALIZED_PCT_CHANGE_SEAS_ADJ':'FRED/MEDCPIM158SFRBCLE',
+                                      'US_CPI_U_MEDIAN_Y_OVER_Y_PCT_CHANGE_SEAS_ADJ':'FRED/MEDCPIM157SFRBCLE'
+                                     }
+
+        self.pce_deflator_sym_dict = {'US_PCE_ANNUAL_RATE_SEAS_ADJ':'FRED/PCE',
+                                      'US_REAL_PCE_ANNUAL_RATE_SEAS_ADJ':'FRED/PCEC96',
+                                      'US_PCE_CORE_MINUS_FOOD_ENERGY_SEAS_ADJ': 'FRED/PCEPILFE'
+                                     }
+
+        self.quandl_ECONOMIC_INDICATORS_SEAS_ADJ_symbols_dict = {
+                                                
                                                 'US_REAL_DPI_ANNUAL_RATE_SEAS_ADJ':'FRED/DSPIC96',
                                                 'US_PPI_FD_SEAS_ADJ': 'FRED/PPIFIS',
                                                 'US_PPI_FD_GOODS_SEAS_ADJ': 'FRED/PPIDGS',
@@ -92,8 +117,7 @@ class QuandlSymbolInterface(object):
                                                 'US_AVG_WEEKLY_HOURS_SEAS_ADJ': 'FRED/AWHAETP',
                                                 'US_AVG_WEEKLY_EARNINGS_SEAS_ADJ':'FRED/CES0500000003',
                                                 'US_WEEKLY_JOBLESS_CLAIMS_SEAS_ADJ':'FRED/ICSA',
-                                                'US_REAL_GDP_ANNUAL_RATE_SEAS_ADJ':'FRED/GDPC1',
-                                                'US_REAL_GDP_PCT_CHANGE_ANNUAL_RATE_SEAS_ADJ':'FRED/A191RL1Q225SBEA',
+                                                
                                                 'US_ECOMMERCE_RETAIL_SALES_PCT_TOTAL_SALES_QRTLY_SEAS_ADJ':'FRED/ECOMPCTSA',
                                                 'US_RETAIL_SALES_RETAIL_EXCLUDING_FOOD_SERVICES_SEAS_ADJ':'FRED/FSXFS',
                                                 'US_RETAIL_ECOMMERCE_SALES_SEAS_ADJ':'FRED/ECOMSA',
@@ -208,50 +232,56 @@ class QuandlSymbolInterface(object):
                                                    'BOE/XUDLBK78' : 'SHEKL_STERLING_spot'
                                                    }
         
-        self.quandl_EURODOLLARS_symbols_dict = {'ED1_WHITE_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED1',
-                                                     'ED2_WHITE_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED2',
-                                                     'ED3_WHITE_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED3',
-                                                     'ED4_WHITE_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED4',
-                                                     'ED5_RED_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED5',
-                                                     'ED6_RED_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED6',
-                                                     'ED7_RED_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED7',
-                                                     'ED8_RED_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED8',
-                                                     'ED9_GREEN_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED9',
-                                                     'ED10_GREEN_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED10',
-                                                     'ED11_GREEN_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED11',
-                                                     'ED12_GREEN_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED12',
-                                                     'ED13_BLUE_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED13',
-                                                     'ED14_BLUE_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED14',
-                                                     'ED15_BLUE_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED15',
-                                                     'ED16_BLUE_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED16',
-                                                     'ED17_GOLD_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED17',
-                                                     'ED18_GOLD_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED18',
-                                                     'ED19_GOLD_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED19',
-                                                     'ED20_GOLD_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED20',
-                                                     'ED21_PURPLE_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED21',
-                                                     'ED22_PURPLE_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED22',
-                                                     'ED23_PURPLE_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED23',
-                                                     'ED24_PURPLE_CONTINUOUS_CONTRACT': 'CHRIS/CME_ED24'}
+        self.quandl_EURODOLLARS_symbols_dict = {'ED1_WHITE': 'CHRIS/CME_ED1',
+                                                'ED2_WHITE': 'CHRIS/CME_ED2',
+                                                'ED3_WHITE': 'CHRIS/CME_ED3',
+                                                'ED4_WHITE': 'CHRIS/CME_ED4',
+                                                'ED5_RED': 'CHRIS/CME_ED5',
+                                                'ED6_RED': 'CHRIS/CME_ED6',
+                                                'ED7_RED': 'CHRIS/CME_ED7',
+                                                'ED8_RED': 'CHRIS/CME_ED8',
+                                                'ED9_GREEN': 'CHRIS/CME_ED9',
+                                                'ED10_GREEN': 'CHRIS/CME_ED10',
+                                                'ED11_GREEN': 'CHRIS/CME_ED11',
+                                                'ED12_GREEN': 'CHRIS/CME_ED12',
+                                                'ED13_BLUE': 'CHRIS/CME_ED13',
+                                                'ED14_BLUE': 'CHRIS/CME_ED14',
+                                                'ED15_BLUE': 'CHRIS/CME_ED15',
+                                                'ED16_BLUE': 'CHRIS/CME_ED16',
+                                                'ED17_GOLD': 'CHRIS/CME_ED17',
+                                                'ED18_GOLD': 'CHRIS/CME_ED18',
+                                                'ED19_GOLD': 'CHRIS/CME_ED19',
+                                                'ED20_GOLD': 'CHRIS/CME_ED20',
+                                                'ED21_PURPLE': 'CHRIS/CME_ED21',
+                                                'ED22_PURPLE': 'CHRIS/CME_ED22',
+                                                'ED23_PURPLE': 'CHRIS/CME_ED23',
+                                                'ED24_PURPLE': 'CHRIS/CME_ED24'
+                                               }
         
         self.new_symbols_dict = new_symbols_dict
         self.local_quandl_forex_data_path = '/workspace/data/quandl/forex/'
         self.local_quandl_economic_indicators_data_path = '/workspace/data/quandl/economic_indcators/'
         self.local_quandl_interest_rate_data_path = '/workspace/data/quandl/interest_rates/'
         self.local_quandl_fed_forecasts_data_path = '/workspace/data/quandl/fed_forecasts/'
+
         self.local_yahoo_data_path = '/workspace/data/yahoo/'
         self.local_misc_data_path = '/workspace/data/'
         self.local_stock_data_path = '/workspace/data/quandl/stocks/'
         
+        self.path_to_local_gdp_data = '/workspace/data/quandl/gdp/'
+        
         self.quandl_auth_token="vGeP2BmzAigd5D1PRDk_"
-    
-        self.quandl_data_class_mapper = {'FOREX':[self.quandl_FOREX_symbols_dict,self.local_quandl_forex_data_path],
+
+        self.quandl_data_class_mapper = {'FOREX_TO_USD':[self.to_usd_sym_dict,self.local_quandl_forex_data_path],
+                                         #'FOREX':[self.quandl_FOREX_symbols_dict,self.local_quandl_forex_data_path],
                                          'EURODOLLARS':[self.quandl_EURODOLLARS_symbols_dict, self.local_quandl_interest_rate_data_path],
                                          'INTEREST_RATES':[self.quandl_INTEREST_RATE_symbols_dict,self.local_quandl_interest_rate_data_path],
                                          'ECONOMIC_INDICATORS_UNADJ':[self.quandl_ECONOMIC_INDICATORS_UNADJ_symbols_dict, self.local_quandl_economic_indicators_data_path],
                                          'ECONOMIC_INDICATORS_SEAS_ADJ':[self.quandl_ECONOMIC_INDICATORS_SEAS_ADJ_symbols_dict, self.local_quandl_economic_indicators_data_path],
                                          'FED_FORECASTS':[self.quandl_FED_FORECAST_symbols_dict, self.local_quandl_fed_forecasts_data_path],
                                          'MISC': [self.local_misc_data_path],
-                                         'STOCKS': [self.local_stock_data_path]}
+                                         'STOCKS': [self.local_stock_data_path],
+                                         'GDP':[self.gdp_sym_dict, self.path_to_local_gdp_data]}
     
     def get_quandl_symbol(self,
                           class_of_data,

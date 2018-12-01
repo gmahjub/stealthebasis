@@ -4,13 +4,15 @@ Created on Dec 13, 2017
 @author: ghazy
 '''
 import os
+
 from datetime import datetime
 import pandas as pd
 import pandas_datareader.data as web
 import numpy as np
 
 from data_object import DataObject
-from os_mux import OSMuxImpl
+from SysOs.os_mux import OSMuxImpl
+
 from root.nested import get_logger
 
 class YahooDataObject(DataObject):
@@ -33,6 +35,9 @@ class YahooDataObject(DataObject):
         self.get_px_low = lambda x: web.DataReader(x, 'yahoo', start=self.start_date, end=self.end_date)['Low']
         self.get_volume = lambda x: web.DataReader(x, 'yahoo', start=self.start_date, end=self.end_date)['Volume']
         
+        self.get_px_all = lambda x: web.DataReader(x, 'yahoo', start=self.start_date, end=self.end_date)
+
+        self.all_px_df = None
         self.adj_close_px_df = None
         self.open_px_df = None
         self.high_px_df = None
@@ -48,7 +53,8 @@ class YahooDataObject(DataObject):
         self.local_high_file_name = '_'.join(self.symbols) + '_High' + self.local_file_type
         self.local_low_file_name = '_'.join(self.symbols) + '_Low' + self.local_file_type
         self.local_volume_file_name = '_'.join(self.symbols) + '_Volume' + self.local_file_type
-        
+        self.local_all_file_name = '_'.join(self.symbols) + self.local_file_type
+
         self.logger.info("YahooDataObject.__init__.local_data_file_pwd: %s", str(self.local_data_file_pwd))
         
         self.yahoo_client_id = "dj0yJmk9Q09ZdnVWMlNEdzdxJmQ9WVdrOWNFTnNRMFV3TkRRbWNHbzlNQS0tJnM9Y29uc3VtZXJzZWNyZXQmeD1mNA--"
@@ -69,7 +75,17 @@ class YahooDataObject(DataObject):
     
     def get_volume_df(self):
         return self.volume_df
+
+    def get_all_px_df(self):
+        return self.all_px_df
     ## end getter methods
+
+    def get_all_prices(self):
+
+        all_px_df = pd.DataFrame({sym:[self.get_px_all(sym)] for sym in self.symbols})
+        self.all_px_df = all_px_df
+        self.all_to_csv()
+        return all_px_df
     
     def get_adjust_close_prices(self):
         
@@ -117,6 +133,10 @@ class YahooDataObject(DataObject):
         
         return np.log(func()/func().shift(1)).dropna()
     
+    def all_to_csv(self):
+
+        self.all_px_df.to_csv(self.local_data_file_pwd + self.local_all_file_name)
+
     def adj_close_to_csv(self):
         
         self.adj_close_px_df.to_csv(self.local_data_file_pwd + self.local_adj_close_file_name)
@@ -136,7 +156,12 @@ class YahooDataObject(DataObject):
     def volume_to_csv(self):
         
         self.volume_df.to_csv(self.local_data_file_pwd + self.local_volume_file_name)
-        
+   
+    def all_from_csv(self):
+
+        self.all_px_df = pd.read_csv(self.local_data_file_pwd + self.local_all_file_name, parse_dates=['Date'], index_col='Date')
+        self.logger.info("YahooDataObject.all_from_csv(): Dataframe Columns %s ", str(self.all_px_df.columns))
+
     def adj_close_from_csv(self):
         
         self.adj_close_px_df = pd.read_csv(self.local_data_file_pwd + self.local_adj_close_file_name, parse_dates=['Date'], index_col='Date')
@@ -177,7 +202,8 @@ class YahooDataObject(DataObject):
                            'Open' : self.local_open_file_name,
                            'High' : self.local_high_file_name,
                            'Low' : self.local_low_file_name,
-                           'Volume' : self.local_volume_file_name}
+                           'Volume' : self.local_volume_file_name,
+                           'All' : self.local_all_file_name}
         
         file_to_find = self.local_data_file_pwd + price_type_dict[price_type]
         b_exists = (os.path.exists(file_to_find))
@@ -193,13 +219,16 @@ class YahooDataObject(DataObject):
         price_type_dict = {'AdjClose': self.adj_close_px_df,
                            'Open': self.open_px_df,
                            'High': self.high_px_df,
-                           'Low': self.low_px_df}
+                           'Low': self.low_px_df,
+                           'All': self.all_px_df}
         df_to_use = price_type_dict[price_type]
         
         return np.log(df_to_use/df_to_use.shift(return_interval)).dropna()
 
 if __name__ == '__main__':
     
+    input_px_type_list = ['All']
+
     symbols_list = ['SPY']
     end_date = str(pd.to_datetime('today')).split(' ')[0]
     ydo = YahooDataObject('2007-01-01',
@@ -207,14 +236,15 @@ if __name__ == '__main__':
                           symbols_list)
     
     ydo.symbols = symbols_list
-    price_type_list = ['AdjClose','Open','High','Low','Volume']
+    price_type_list = ['All', 'AdjClose','Open','High','Low','Volume']
     price_type_dict = {'AdjClose': [ydo.get_adjust_close_prices, ydo.adj_close_from_csv, ydo.adj_close_px_df],
                        'Open': [ydo.get_open_prices, ydo.open_from_csv, ydo.open_px_df],
                        'High': [ydo.get_high_prices, ydo.high_from_csv, ydo.high_px_df],
                        'Low': [ydo.get_low_prices, ydo.low_from_csv, ydo.low_px_df],
-                       'Volume': [ydo.get_eod_volume, ydo.volume_from_csv, ydo.volume_df] }
+                       'Volume': [ydo.get_eod_volume, ydo.volume_from_csv, ydo.volume_df],
+                       'All': [ydo.get_all_prices, ydo.all_from_csv, ydo.all_px_df]}
     
-    for price_type in price_type_list:
+    for price_type in input_px_type_list: #price_type_list:
         func_0 = price_type_dict[price_type][0]
         func_1 = price_type_dict[price_type][1]
         df_name = price_type_dict[price_type][2]

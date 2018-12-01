@@ -12,7 +12,7 @@ class OSMuxImpl(object):
     
     def __init__(self):
         
-        logger = get_logger()
+        self.logger = get_logger()
         self.system = platform.system()
         self.user = getpass.getuser()
         

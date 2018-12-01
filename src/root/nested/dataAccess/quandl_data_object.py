@@ -5,17 +5,17 @@ Created on Dec 1, 2017
 '''
 
 import os
+from root import nested
 from quandl_interface import QuandlSymbolInterface
 from data_object import DataObject
-import quandl_interface
+
 import numpy as np
 import pandas as pd
-#from root.nested.dataAccess.quandl_interface. import QuandlSymbolInterface
-#from root.nested.dataAccess.data_object import DataObject
+
 import quandl
 from datetime import datetime
 
-from root.nested.SysOps.os_mux import OSMuxImpl
+from os_mux import OSMuxImpl
 
 class QuandlDataObject(DataObject):
     
@@ -23,7 +23,27 @@ class QuandlDataObject(DataObject):
                  class_of_data,
                  local_symbol,
                  local_file_type):
+
+        # class of data
+        ################################
+        # 'FOREX'
+        # 'EURODOLLARS'
+        # 'INTEREST_RATES'
+        # 'ECONOMIC_INDICATORS_UNADJ'
+        # 'ECONOMIC_INDICATORS_SEAS_ADJ'
+        # 'FED_FORECASTS'
+        # 'MISC'
+        # 'STOCKS'
+
+        # local_symbol
+        ################################
+        # See the static dictionaries in quandl_interface.py.
+        # The local symbol is the key in the key,value pairs that make up those non-reversed dictionaries.
         
+        # local_file_type
+        ################################
+        # usually .csv
+
         super().__init__()
         self.qsi = QuandlSymbolInterface()
         self.class_of_data = class_of_data
@@ -103,7 +123,6 @@ class QuandlDataObject(DataObject):
     def get_from_quandl_numpy_array(self):
         
         return quandl.get(self.quandl_symbol, authtoken=self.qsi.quandl_auth_token, returns="numpy")
-        
         
     def get_DF_quarterly_sampling_freq(self):
         
@@ -192,6 +211,12 @@ def custom_resampler(array_like):
 
 if __name__ == '__main__':
     
-    qdo = QuandlDataObject('EURO_USD_spot',
-                           '.csv')
-
+    qdo_euro = QuandlDataObject('FOREX_TO_USD',
+                                'EUR_USD_spot',
+                                '.csv')
+    qdo_yen = QuandlDataObject('FOREX_TO_USD',
+                               'JPY_USD_spot',
+                               '.csv')
+    qdo_gbp = QuandlDataObject('FOREX_TO_USD',
+                               'GBP_USD_spot',
+                               '.csv')

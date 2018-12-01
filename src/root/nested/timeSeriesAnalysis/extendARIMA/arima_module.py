@@ -372,15 +372,15 @@ class ArimaImplObject(object):
         return stats.norm.ppf(1-(1-ci)/2.)
     
     # uses statsmodels.tsa.stattools.arma_order_select_ic
-# using fit_kw to speed up the ARMA.fit() process
-# fit_kw = { method: 'css'}
-# timeseries parameter here is a np.array
-# max_ar_params is default 4
-# max ma params is default 2
-# ic_param is 'AIC', but could be other ones too, look at docs
-# trend_param = 'nc', could be other ones too, we will use 'nc'
-# returns a coordinate, (x,y) wher x is the row number, y is the col number
-# x is the AR order and y is the MA order
+    # using fit_kw to speed up the ARMA.fit() process
+    # fit_kw = { method: 'css'}
+    # timeseries parameter here is a np.array
+    # max_ar_params is default 4
+    # max ma params is default 2
+    # ic_param is 'AIC', but could be other ones too, look at docs
+    # trend_param = 'nc', could be other ones too, we will use 'nc'
+    # returns a coordinate, (x,y) wher x is the row number, y is the col number
+    # x is the AR order and y is the MA order
     def find_ARIMA_params_automated(self,
                                     timeseries,
                                     max_ar_param,

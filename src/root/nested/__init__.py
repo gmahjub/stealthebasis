@@ -60,5 +60,5 @@ def main():
     logger = get_logger()
     logger.info("nested.init.Main(): Instantiated a logger...")
 
-main()
+#main()
 
