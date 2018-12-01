@@ -10,11 +10,6 @@ class twitter(object):
 
     def __init__(self, **kwargs):
 
-        self.access_token = "2295104966-YyMcXmJxWKRM7ftVrVzlc6Xa50RfKmTBIoIxVjj"
-        self.access_token_secret = "FAtvOEHCZti7MkcXTblLZt1IOMRRyt4OmoqNR5xOAvZLj"
-        self.consumer_key = "zF2itLSqmns4yBfSsL52FSM9Z"
-        self.consumer_secret = "Bl8wFVLOTaH46Oc52BH70L66UPHuGc8iVi9FtEytu8Q688F6sW"
-
         return super().__init__(**kwargs)
 
     def init_tweepy_auth_handler(self):
