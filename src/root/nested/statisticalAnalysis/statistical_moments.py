@@ -94,7 +94,30 @@ class StatisticalMoments(object):
 
         return (returns)
 
+    """ get_pricing: main function to retrieve daily price data
+        The source of this data is currently Tiingo. 
+    """
+    def get_pricing(self,
+                    ticker,
+                    start_date,
+                    end_date,
+                    fields = ['adjOpen', 'adjHigh', 'adjLow', 'adjClose']):
 
+        symbols = [ticker]
+        source = 'Tiingo'
+        mdo = TiingoDataObject(start_date = start_date,
+                               end_date = end_date,
+                               source = source,
+                               symbols = symbols)
+        pricing_dict = mdo.get_px_data_df(start_date,
+                                          end_date)
+        pricing_df = pricing_dict[ticker]
+        pricing = pricing_df[fields]
+        return (pricing)
+
+    """ Calculate the kurtosis of the returns for the specificed ticker, with specificed
+        start and end dates. 
+    """
     def calc_stock_return_kurtosis(self,
                                    ticker,
                                    start_date = '2010-01-01',
@@ -109,7 +132,9 @@ class StatisticalMoments(object):
         elif (kurt > 0):
             print ("Excess Kurtosis is ", kurt, ".Because the excess kurtosis is positive, Y is leptokurtic. Leptokurtic distributions have fatter tails, meaning there is more tail risk.")
 
-        
+    """Calculate the skew of the returns for the specified ticker, with specificed
+        start and end dates.
+    """
     def calc_stock_return_skew(self,
                                ticker,
                                start_date='2010-01-01', # 2010-01-01 to present is max data offered by Tiingo
@@ -120,14 +145,16 @@ class StatisticalMoments(object):
         plt.hist(returns, 30)
         plt.show()
         print ('Skew: ', skew)
-        
+      
+    """ Calculate a rolling skey, with window size "window_size", for the specified
+        ticker with specified start and end dates.
+    """
     def rolling_skew_of_returns(self,
                                 ticker,
                                 start_date,
                                 end_date,
                                 window_size):
 
-        print ("WHAT THE FUCK", type(stat_func))
         returns = self.get_stock_returns(ticker, start_date, end_date)
         roll_func = returns.rolling(window = window_size, center = False).skew()
         plt.plot(roll_func)
@@ -135,7 +162,51 @@ class StatisticalMoments(object):
         plt.ylabel(str(window_size) + " Period Rolling Skew")
         plt.show()
 
+    """EXAMPLE function: Return the following types of variance metrics:
+        Range, Mean Absolute Deviation, Variance, Standard Deviation, Semivariance,
+        and Semideviation.
+        Parameter "semivar_cutoff" specifies where in the data to split high and low. For example,
+        if we want to calculate volatility for a stock separately for upside moves and downside moves,
+        we would set the semivar_cutoff to 0.0 (where data is a numpy array of returns).
+        
+    """
+    def calc_variance_metrics_example(self,
+                                      data,
+                                      semivar_cutoff):
+
+        mu = np.mean(data)
+        dist_range = np.ptp(data)
+        abs_deviation = [np.abs(mu - x) for x in data]
+        MAD = np.sum(abs_deviation)/len(data)
+        variance = np.var(data)
+        std_dev = np.std(data)
+        # semi-variance
+        semi_var_lows = [less_mu for less_mu in data if less_mu <= mu]
+        semi_var_highs = [more_mu for more_mu in data if more_mu > mu]
+        semi_var_lows = np.sum( ( semi_var_lows - mu)**2 )/len(semi_var_lows)
+        semi_var_highs = np.sum( ( semi_var_highs - mu)**2 )/len(semi_var_highs)
+        print ("Range: ", dist_range, '\n', 
+               "Mean Abs Deviation: ", MAD, '\n', 
+               "Variance: ", variance, '\n', 
+               "Std Dev: ", std_dev, '\n',
+               "Semivariance (downside var): ", semi_var_lows, '\n',
+               "Semi-deviation (downside vol): ", np.sqrt(semi_var_lows), '\n',
+               "Semivariance (upside var): ", semi_var_highs, '\n',
+               "Semi-deviation (upside vol): ", np.sqrt(semi_var_highs))
+
+
+
 sm = StatisticalMoments()
+ticker = 'T'
+start_date = '2016-01-01'
+end_date = '2017-01-01'
+pricing = sm.get_pricing(ticker = ticker, start_date = start_date, end_date = end_date)
+print (type(pricing))
+print (pricing.head())
+X = np.random.randint(100, size = 100)
+mu = np.mean(X)
+sm.calc_variance_metrics_example(data = X, semivar_cutoff=mu)
+
 sm.calc_skew_example()
 sm.calc_stock_return_skew(ticker = 'NFLX',
                           start_date = '2015-01-01',

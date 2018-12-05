@@ -32,6 +32,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="src\root\nested\dataAccess\tiingo_data_object.py" />
+    <Compile Include="src\root\nested\dataAccess\WebApi\ibkr_api.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\root\nested\dataAccess\WebApi\omdb.py">
       <SubType>Code</SubType>
     </Compile>
@@ -67,6 +70,10 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="src\root\nested\statisticalAnalysis\__init__.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\root\nested\stocks\historical_bar_data.py" />
+    <Compile Include="src\root\nested\stocks\__init__.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="src\root\nested\SysOs\os_mux.py" />
@@ -108,6 +115,7 @@
     <Folder Include="src\root\nested\interestRateModeling" />
     <Folder Include="src\root\nested\futures\" />
     <Folder Include="src\root\nested\statisticalAnalysis\" />
+    <Folder Include="src\root\nested\stocks\" />
     <Folder Include="src\root\nested\SysOs" />
     <Folder Include="src\root\nested\timeSeriesAnalysis" />
     <Folder Include="src\root\nested\timeSeriesAnalysis\extendARIMA" />
