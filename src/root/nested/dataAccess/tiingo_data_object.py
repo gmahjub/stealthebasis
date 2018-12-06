@@ -1,12 +1,13 @@
 import os
 import pandas as pd
-import datetime as dt
 import pandas_datareader.data as web
 from datetime import datetime
-from data_object import DataObject
-from os_mux import OSMuxImpl
+from root.nested.dataAccess.data_object import DataObject
+from root.nested.SysOs.os_mux import OSMuxImpl
 
 from root.nested import get_logger
+from root.nested.dataAccess.secure_keys_access import SecureKeysAccess
+
 
 class TiingoDataObject(DataObject):
     """description of class"""
@@ -20,7 +21,7 @@ class TiingoDataObject(DataObject):
         self.start_date = ""
         self.end_date = ""
         self.source = "tiingo"
-        
+        self.api_key = SecureKeysAccess.get_vendor_api_key_static(vendor=str.upper(self.source))
 
         for key,value in kwargs.items():
 

@@ -4,7 +4,7 @@ import pandas as pd
 import scipy.stats as stats
 from statsmodels.stats.stattools import jarque_bera
 
-from tiingo_data_object import TiingoDataObject
+from root.nested.dataAccess.tiingo_data_object import TiingoDataObject
 
 class StatisticalMoments(object):
     """description of class"""
@@ -12,6 +12,7 @@ class StatisticalMoments(object):
     def __init__(self, **kwargs):
         return super().__init__(**kwargs)
 
+    @staticmethod
     def calc_skew_example(self):
 
         xs2 = np.linspace(stats.gamma.ppf(0.01, 0.7, loc = -1), stats.gamma.ppf(0.99, 0.7, loc=-1), 150) + 1
@@ -28,6 +29,7 @@ class StatisticalMoments(object):
         else:
             print ('The distribution is symetric')
 
+    @staticmethod
     def calc_kurtosis_example(self):
 
         xs = np.linspace(-6, 6, 300) + 2
@@ -101,14 +103,14 @@ class StatisticalMoments(object):
                     ticker,
                     start_date,
                     end_date,
-                    fields = ['adjOpen', 'adjHigh', 'adjLow', 'adjClose']):
+                    fields=['adjOpen', 'adjHigh', 'adjLow', 'adjClose']):
 
         symbols = [ticker]
         source = 'Tiingo'
-        mdo = TiingoDataObject(start_date = start_date,
-                               end_date = end_date,
-                               source = source,
-                               symbols = symbols)
+        mdo = TiingoDataObject(start_date=start_date,
+                               end_date=end_date,
+                               source=source,
+                               symbols=symbols)
         pricing_dict = mdo.get_px_data_df(start_date,
                                           end_date)
         pricing_df = pricing_dict[ticker]
@@ -193,7 +195,6 @@ class StatisticalMoments(object):
                "Semi-deviation (downside vol): ", np.sqrt(semi_var_lows), '\n',
                "Semivariance (upside var): ", semi_var_highs, '\n',
                "Semi-deviation (upside vol): ", np.sqrt(semi_var_highs))
-
 
 
 sm = StatisticalMoments()

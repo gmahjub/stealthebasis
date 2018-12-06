@@ -10,7 +10,6 @@ import pandas.core as pdc
 from root.nested import get_logger
 
 from pandas_datareader import DataReader
-from datetime import datetime
 
 
 class DataObject(object):
