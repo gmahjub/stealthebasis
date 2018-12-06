@@ -6,9 +6,7 @@ Created on Jan 24, 2018
 
 import pandas as pd
 from data_provider_interface import DataProviderInterface
-#from root.nested.data_provider_interface import DataProviderInterface
 from yahoo_data_object import YahooDataObject
-#from root.nested.yahoo_data_object import YahooDataObject
 
 dpi = DataProviderInterface()
 suf_df = dpi.get_stock_universe_file_as_df()
