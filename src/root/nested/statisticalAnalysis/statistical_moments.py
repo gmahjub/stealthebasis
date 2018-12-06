@@ -4,7 +4,7 @@ import pandas as pd
 import scipy.stats as stats
 from statsmodels.stats.stattools import jarque_bera
 
-from root.nested.dataAccess.tiingo_data_object import TiingoDataObject
+from root.nested.dataAccess.tiingo_data_object import TiingoDataObject 
 
 class StatisticalMoments(object):
     """description of class"""
@@ -13,7 +13,7 @@ class StatisticalMoments(object):
         return super().__init__(**kwargs)
 
     @staticmethod
-    def calc_skew_example(self):
+    def calc_skew_example():
 
         xs2 = np.linspace(stats.gamma.ppf(0.01, 0.7, loc = -1), stats.gamma.ppf(0.99, 0.7, loc=-1), 150) + 1
         X = stats.gamma.pdf(xs2, 1.5)
@@ -30,7 +30,7 @@ class StatisticalMoments(object):
             print ('The distribution is symetric')
 
     @staticmethod
-    def calc_kurtosis_example(self):
+    def calc_kurtosis_example():
 
         xs = np.linspace(-6, 6, 300) + 2
         Y = stats.cosine.pdf(xs)
@@ -208,7 +208,7 @@ X = np.random.randint(100, size = 100)
 mu = np.mean(X)
 sm.calc_variance_metrics_example(data = X, semivar_cutoff=mu)
 
-sm.calc_skew_example()
+StatisticalMoments.calc_skew_example()
 sm.calc_stock_return_skew(ticker = 'NFLX',
                           start_date = '2015-01-01',
                           end_date = '2016-01-01')

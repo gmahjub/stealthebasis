@@ -1,17 +1,14 @@
+import numpy as np
+import pandas as pd
+import pandas.core as pdc
+from root.nested import get_logger
+from pandas_datareader import DataReader
+
 '''
 Created on Dec 8, 2017
 
 @author: ghazy
 '''
-
-import numpy as np
-import pandas as pd
-import pandas.core as pdc
-from root.nested import get_logger
-
-from pandas_datareader import DataReader
-
-
 class DataObject(object):
     
     def __init__(self, **kwargs):

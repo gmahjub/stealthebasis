@@ -8,7 +8,11 @@ from root.nested.SysOs.os_mux import OSMuxImpl
 from root.nested import get_logger
 from root.nested.dataAccess.secure_keys_access import SecureKeysAccess
 
+'''
+Created on Jan 17, 2018
 
+@author: ghazy
+'''
 class TiingoDataObject(DataObject):
     """description of class"""
 
