@@ -153,6 +153,7 @@ class TiingoDataObject(DataObject):
         
         return (return_dict)
 
+
 if __name__ == '__main__':
     
     input_px_type_list = ['All']
@@ -192,4 +193,4 @@ if __name__ == '__main__':
             else:
                 mdo.logger.info("Pulling new dataframes from Tiingo...")
                 _ = func_0(sym)
-    
+

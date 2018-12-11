@@ -1,11 +1,9 @@
 import numpy as np
-import numpy.random as nprandom
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
-from ecdf import ECDF
-
+from root.nested.statisticalAnalysis.ecdf import ECDF
 from root.nested import get_logger
+
 
 class HackerStats(object):
     """description of class"""
@@ -24,7 +22,7 @@ class HackerStats(object):
 
         # seed the random number generator first
         self.seed_rand_num_generator()
-        reutrn (np.random.random(size = size))
+        return (np.random.random(size = size))
 
     def perform_bernoulli_trials(self, n, p):
 
@@ -43,7 +41,7 @@ class HackerStats(object):
         n_defaults = np.random.binomial(n, p, size = size)
         self.plot_simulation_ecdf(n_defaults,
                                   x_label = "num_defaults/100",
-                                  y_label = "CDF (%/100)")
+                                  y_label = "CDF (%/100) (BinomialDist)")
 
     def sample_poisson_dist(self, np, size = 10000):
 
@@ -52,7 +50,7 @@ class HackerStats(object):
         samples_poisson = np.random.poisson(np, size = size)
         self.plot_simulation_ecdf(samples_poisson,
                                   x_label = "num_defaults/100",
-                                  y_label = "CDF (%/100)")
+                                  y_label = "CDF (%/100) (PoissonDist)")
 
     def sample_exponential_dist(self, mu_param, size = 100000):
 
@@ -61,14 +59,40 @@ class HackerStats(object):
         samples_exp = np.random.exponential(scale = mu_param, size = size)
         self.plot_simulation_ecdf(samples_exp,
                                   x_label = "x",
-                                  y_label = "y")
+                                  y_label = "y (Exp Dist")
 
     def sample_normal_dist(self, mu, sigma, size = 100000):
 
         samples = np.random.normal(loc = mu, scale = sigma, size = size)
         self.plot_simulation_ecdf(samples,
                                   x_label = 'x',
-                                  y_label = 'y')
+                                  y_label = 'y (NormalDist)')
+
+    def sample_log_normal_dist(self, mu, sigma, size = 100000):
+
+        samples = np.random.lognormal(mean=mu, sigma=sigma, size=size)
+        self.plot_simulation_ecdf(samples,
+                                  x_label='x',
+                                  y_label='y (LogNormalDist)')
+
+    def sample_gamma_dist(self, k, theta, size=100000):
+
+        samples = np.random.gamma(shape=k, scale=theta, size=size)
+        self.plot_simulation_ecdf(samples,
+                                  x_label='x',
+                                  y_label='y (GammaDist)')
+
+    def sample_weibull_dist(self, lam, k, size=100000):
+
+        samples = np.random.weibull(a=k, size=size)*lam
+        self.plot_simulation_ecdf(samples,
+                                  x_label='x',
+                                  y_label='y (WeibullDist)')
+
+    def get_num_bins_hist(self,
+                          sample_size):
+
+        return np.sqrt(sample_size)
 
     def check_normality(self,
                         data):
@@ -77,9 +101,9 @@ class HackerStats(object):
 
         mu = np.mean(data)
         sigma = np.std(data)
-        samples = np.random.normal(loc = mu, scale = sigma, size = 10000)
-        ecdf_theor = ECDF(samples)
-        ecdf_data = ECDF(data)
+        samples = np.random.normal(loc=mu, scale=sigma, size=10000)
+        ecdf_theor = ECDF(data=samples)
+        ecdf_data = ECDF(data=data)
 
         _ = plt.plot(ecdf_theor.x_data, ecdf_theor.y_data)
         _ = plt.plot(ecdf_data.x_data, ecdf_data.y_data, marker = '.', linestyle = 'none')
@@ -90,11 +114,13 @@ class HackerStats(object):
     def plot_simulation_ecdf(self,
                              data,
                              x_label,
-                             y_label):
+                             y_label,
+                             title='ECDF'):
 
         self.logger.info("HackertStats.plot_simulation_ecdf.data: %s ", str(data))
         ecdf = ECDF(data = data)
-        ecdf.plot_ecdf(x_label, y_label)
+        ecdf.plot_ecdf(x_label, y_label, title)
+        return (ecdf)
 
     def plot_pdf(self,
                  data,
@@ -433,10 +459,10 @@ def pearson_r(x,y):
         return (np.corrcoef(x,y)[0,1])
 
 
+    # create a function that takes in stock returns data, and spits out a histogram
+    # showing the likelihood of future returns by magnitute, from negative to positive.
+    # this is Monte Carlo Simulation
 
-    ## create a function that takes in stock returns data, and spits out a histogram
-    ## showing the likelihood of future returns by magnitute, from negative to positive.
-    ## this is Monte Carlo Simulation
 
 if __name__ == '__main__':
 

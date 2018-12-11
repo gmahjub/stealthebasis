@@ -3,8 +3,9 @@ import numpy as np
 import pandas as pd
 import scipy.stats as stats
 from statsmodels.stats.stattools import jarque_bera
+from root.nested.dataAccess.tiingo_data_object import TiingoDataObject
+from root.nested.statisticalAnalysis.hacker_stats import HackerStats
 
-from root.nested.dataAccess.tiingo_data_object import TiingoDataObject 
 
 class StatisticalMoments(object):
     """description of class"""
@@ -76,11 +77,11 @@ class StatisticalMoments(object):
         else:
             print ("jarques-bera test p-value of ", pvalue, " is not within 5% error tolerance; returns are not likely normal.")
 
-
     def get_stock_returns(self,
                           ticker,
-                          start_date = '2010-01-01',
-                          end_date = str(pd.to_datetime('today')).split(' ')[0]):
+                          start_date='2010-01-01',
+                          end_date=str(pd.to_datetime('today')).split(' ')[0],
+                          px_type='adjClose'):
 
         symbols = [ticker]
         source = 'Tiingo'
@@ -89,12 +90,11 @@ class StatisticalMoments(object):
                                source = source, 
                                symbols = symbols)
         pricing_dict = mdo.get_px_data_df(start_date,
-                                          end_date) # returned df will not include all dates up to, but not including, end_date
-        pricing_df = pricing_dict[ticker] # dataframe containing the price data
-        pricing = pricing_df['adjClose']
+                                          end_date)
+        pricing_df = pricing_dict[ticker]
+        pricing = pricing_df[px_type]
         returns = pricing.pct_change()[1:]
-
-        return (returns)
+        return returns
 
     """ get_pricing: main function to retrieve daily price data
         The source of this data is currently Tiingo. 
@@ -115,7 +115,7 @@ class StatisticalMoments(object):
                                           end_date)
         pricing_df = pricing_dict[ticker]
         pricing = pricing_df[fields]
-        return (pricing)
+        return pricing
 
     """ Calculate the kurtosis of the returns for the specificed ticker, with specificed
         start and end dates. 
@@ -127,12 +127,15 @@ class StatisticalMoments(object):
 
         returns = self.get_stock_returns(ticker, start_date, end_date)
         kurt = stats.kurtosis(returns)
-        plt.hist(returns, 30)
-        plt.show()
-        if (kurt < 0):
-            print ("Excess Kurtosis is ", kurt, ".Because the excess kurtosis is negative, Y is platykurtic. Platykurtic distributions cluster around the mean, meaning less tail risk.")
-        elif (kurt > 0):
-            print ("Excess Kurtosis is ", kurt, ".Because the excess kurtosis is positive, Y is leptokurtic. Leptokurtic distributions have fatter tails, meaning there is more tail risk.")
+        if kurt < 0:
+            print ("Excess Kurtosis is ", kurt, ".Because the excess kurtosis is negative, "
+                                                "Y is platykurtic. Platykurtic distributions "
+                                                "cluster around the mean, meaning less tail risk.")
+        elif kurt > 0:
+            print ("Excess Kurtosis is ", kurt, ".Because the excess kurtosis is positive, "
+                                                "Y is leptokurtic. Leptokurtic distributions "
+                                                "have fatter tails, meaning there is more tail risk.")
+        return kurt
 
     """Calculate the skew of the returns for the specified ticker, with specificed
         start and end dates.
@@ -140,13 +143,13 @@ class StatisticalMoments(object):
     def calc_stock_return_skew(self,
                                ticker,
                                start_date='2010-01-01', # 2010-01-01 to present is max data offered by Tiingo
-                               end_date=str(pd.to_datetime('today')).split(' ')[0]):  # str, e.g. "2011-01-01"
+                               end_date=str(pd.to_datetime('today')).split(' ')[0], # str, e.g. "2011-01-01"
+                               px_type = 'adjClose'):
 
-        returns = self.get_stock_returns(ticker, start_date, end_date)
+        returns = self.get_stock_returns(ticker, start_date, end_date, px_type=px_type)
         skew = stats.skew(returns)
-        plt.hist(returns, 30)
-        plt.show()
         print ('Skew: ', skew)
+        return skew
       
     """ Calculate a rolling skey, with window size "window_size", for the specified
         ticker with specified start and end dates.
@@ -197,38 +200,51 @@ class StatisticalMoments(object):
                "Semi-deviation (upside vol): ", np.sqrt(semi_var_highs))
 
 
-sm = StatisticalMoments()
-ticker = 'T'
-start_date = '2016-01-01'
-end_date = '2017-01-01'
-pricing = sm.get_pricing(ticker = ticker, start_date = start_date, end_date = end_date)
-print (type(pricing))
-print (pricing.head())
-X = np.random.randint(100, size = 100)
-mu = np.mean(X)
-sm.calc_variance_metrics_example(data = X, semivar_cutoff=mu)
+    def random_numbers_test(self):
 
-StatisticalMoments.calc_skew_example()
-sm.calc_stock_return_skew(ticker = 'NFLX',
-                          start_date = '2015-01-01',
-                          end_date = '2016-01-01')
-sm.calc_stock_return_kurtosis(ticker = 'NFLX',
-                              start_date = '2015-01-01',
-                              end_date = '2016-01-01')
-sm.jarque_bera_calibration(0.05)
-sm.test_normality(ticker = "SPY", 
-                  start_date = '2012-01-01', 
-                  end_date = '2015-01-01')
-print ("test in sample normaility of ticker AMC...")
-sm.test_normality(ticker = "AMC",
-                  start_date = '2014-01-01',
-                  end_date = '2016-01-01')
-print ("...and now out of sample. Can we make the same conclusion about normality?")
-sm.test_normality(ticker = "AMC",
-                  start_date = '2016-01-01',
-                  end_date = '2017-01-01')
-print("How about looking at rolling skew, to see how return distribution changes over time...")
-sm.rolling_skew_of_returns(ticker = 'AMC', 
-                           start_date = '2015-01-01', 
-                           end_date = '2017-01-01',
-                           window_size = 60)
+        hs = HackerStats()
+        normal_dist_sample = hs.sample_normal_dist(0.0, 0.5, size=1000)
+        hs.check_normality(normal_dist_sample)
+        bins = hs.get_num_bins_hist(len(normal_dist_sample))
+        hist, edges = np.histogram(normal_dist_sample, bins=bins, density=True)
+
+
+
+
+if __name__ == '__main__':
+
+    sm = StatisticalMoments()
+    sm.random_numbers_test()
+    ticker = 'T'
+    start_date = '2016-01-01'
+    end_date = '2017-01-01'
+    pricing = sm.get_pricing(ticker = ticker, start_date = start_date, end_date = end_date)
+    print(type(pricing))
+    print(pricing.head())
+    X = np.random.randint(100, size = 100)
+    mu = np.mean(X)
+    sm.calc_variance_metrics_example(data = X, semivar_cutoff=mu)
+    StatisticalMoments.calc_skew_example()
+    sm.calc_stock_return_skew(ticker='NFLX',
+                              start_date='2015-01-01',
+                              end_date='2016-01-01')
+    sm.calc_stock_return_kurtosis(ticker='NFLX',
+                                  start_date='2015-01-01',
+                                  end_date='2016-01-01')
+    sm.jarque_bera_calibration(0.05)
+    sm.test_normality(ticker="SPY",
+                      start_date='2012-01-01',
+                      end_date='2015-01-01')
+    print ("test in sample normaility of ticker AMC...")
+    sm.test_normality(ticker="AMC",
+                      start_date='2014-01-01',
+                      end_date='2016-01-01')
+    print ("...and now out of sample. Can we make the same conclusion about normality?")
+    sm.test_normality(ticker="AMC",
+                      start_date='2016-01-01',
+                      end_date='2017-01-01')
+    print("How about looking at rolling skew, to see how return distribution changes over time...")
+    sm.rolling_skew_of_returns(ticker='AMC',
+                               start_date='2015-01-01',
+                               end_date='2017-01-01',
+                               window_size=60)

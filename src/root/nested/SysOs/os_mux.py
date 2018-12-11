@@ -8,6 +8,7 @@ import getpass
 import os
 from root.nested import get_logger
 
+
 class OSMuxImpl(object):
     
     def __init__(self):

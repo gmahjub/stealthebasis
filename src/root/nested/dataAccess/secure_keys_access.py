@@ -158,6 +158,9 @@ class SecureKeysAccess:
             else:
                 return
 
-SecureKeysAccess.insert_api_key('IBKR', "fuck off")
-SecureKeysAccess.update_api_key("IBKR", "dgh78_98!")
-SecureKeysAccess.delete_vendor('IBKR')
+
+if __name__ == '__main__':
+
+    SecureKeysAccess.insert_api_key('IBKR', "fuck off")
+    SecureKeysAccess.update_api_key("IBKR", "dgh78_98!")
+    SecureKeysAccess.delete_vendor('IBKR')

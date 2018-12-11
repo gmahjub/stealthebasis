@@ -3,9 +3,14 @@ from bokeh.io import output_file, show
 from bokeh.layouts import row, column, gridplot
 from bokeh.models.widgets import Panel, Tabs
 from bokeh.models import HoverTool
+import numpy as np
+import scipy as sp
+from scipy import stats
+import seaborn as sns
 
-
+from root.nested.statisticalAnalysis.hacker_stats import HackerStats
 from root.nested import get_logger
+
 
 class ExtendBokeh(object):
     """description of class"""
@@ -14,7 +19,6 @@ class ExtendBokeh(object):
 
         self.logger = get_logger()
         return super().__init__(**kwargs)
-
 
     def bokeh_scatter(self,
                       x_data,
@@ -74,7 +78,6 @@ class ExtendBokeh(object):
                                    y_data_list,
                                    x_label,
                                    y_label,
-                                   point_shape_list,
                                    output_html_filename,
                                    colors_list,
                                    sizes_list,
@@ -97,10 +100,6 @@ class ExtendBokeh(object):
             output_file(output_html_filename)
             show(p)
 
-    ## if x_axis on a bokeh plot is a time series, then x-axis can be datetime objects
-    ## to specify this in figure() function call, use x_axis_type = 'datetime'
-
-    ## if plotting a stock price, use this function
     def bokeh_timeseries_line_plot(self,
                                    x_data,
                                    y_data,
@@ -109,6 +108,10 @@ class ExtendBokeh(object):
                                    output_html_filename,
                                    incl_data_points=False):
 
+        """if X axis on a bokeh plot is a time series, then x-acis can be datetime objects
+        to specify this in figure() function call, use x-axis type = 'datetime'.
+        USE THIS FUNCTION TO PLOT A STOCK PRICE."""
+
         p = figure(x_axis_type = 'datetime', x_axis_label = x_label, y_axis_label = y_label)
         p.line(x_data, y_data)
         if incl_data_points:
@@ -116,9 +119,6 @@ class ExtendBokeh(object):
         output_file(output_html_filename)
         show(p)
 
-    ## given a dataframe, plot two columns (x,y) grouped by a 3rd column
-    ## 3rd column must represent actual colors
-    ## this method is very restricted by the group_by column
     def bokeh_scatter_plot_dataframe(self,
                                      df,
                                      group_by_col_name,
@@ -126,6 +126,9 @@ class ExtendBokeh(object):
                                      y_data_col,
                                      output_html_filename,
                                      dot_size = 10):
+        """ Given a dataframe, plot 2 columns (x, y) grouped by a 3rd columns.
+        3rd column must represent actual colors. This method is very restrictive,
+        because of the group_by column."""
 
         p = figure(x_axis_label = x_data_col, y_axis_label = y_data_col)
         p.circle(df[x_data_col], df[y_data_col], color = df[group_by_col_name], size = dot_size)
@@ -234,7 +237,7 @@ class ExtendBokeh(object):
         output_file(output_html_filename)
         show(layout)
 
-    ## linking axes oon different charts in a grid layout. Explore how we can use this.
+    # linking axes on different charts in a grid layout. Explore how we can use this.
 
     def bokeh_add_hover_tool(self,
                              label,
@@ -249,8 +252,154 @@ class ExtendBokeh(object):
         output_file('hover.html')
         show(figure_obj)
 
+    def bokeh_histogram_overlay_normal(self,
+                                       data):
+
+        hs = HackerStats()
+        mu = np.mean(data)
+        sigma = np.std(data)
+        ecdf_obj = hs.plot_simulation_ecdf(data = data, x_label = 'Px Ret', y_label='freq', title='Normal')
+        ecdf_x = ecdf_obj.get_x_data()
+        ecdf_y = ecdf_obj.get_y_data()
+        bins = int(np.ceil(hs.get_num_bins_hist(len(data))))
+        self.logger.info("ExtendBokeh.bokeh_histogram_overlay_normal(): number of bins calculated is %s", str(bins))
+        hist, edges = np.histogram(data, bins=bins, density=True)
+        x = np.linspace(stats.norm.ppf(0.001, loc=mu, scale=sigma),
+                        stats.norm.ppf(0.999, loc=mu, scale=sigma), 1000)
+        pdf = stats.norm.pdf(x=x, loc=mu, scale=sigma)
+        cdf = stats.norm.cdf(x=x, loc=mu, scale=sigma)
+        kde = stats.gaussian_kde(data, bw_method='scott')
+        kde_pdf = kde.pdf(x)
+        # pdf = 1 / (sigma * np.sqrt(2 * np.pi)) * np.exp(-(x - mu) ** 2 / (2 * sigma ** 2))
+        # cdf = (1 + sp.special.erf((x - mu) / np.sqrt(2 * sigma ** 2))) / 2
+        p_hist = make_histogram_plot("Normal Distribution (μ=" + str(mu) + ", σ=" + str(sigma) + ")",
+                                     hist, edges, x, pdf, cdf, kde_pdf)
+        p_cdf = make_cdf_plot("Normal Distribution (μ=" + str(mu) + ", σ=" + str(sigma) + ")",
+                              x, cdf, ecdf_x, ecdf_y)
+        return p_hist, p_cdf
+
+    def bokeh_histogram_overlay_lognormal(self,
+                                          data):
+
+        hs = HackerStats()
+        mu = np.mean(data)
+        sigma = np.std(data)
+        ecdf_obj = hs.plot_simulation_ecdf(data=data, x_label='Px Ret', y_label='freq', title='LogNormal')
+        ecdf_x = ecdf_obj.get_x_data()
+        ecdf_y = ecdf_obj.get_y_data()
+
+        bins = int(np.ceil(hs.get_num_bins_hist(len(data))))
+        hist, edges = np.histogram(data, bins=bins, density=True)
+        x = np.linspace(np.min(data), np.max(data), num=len(data)*10)
+        # x = np.linspace(0.0001, 8.0, 1000)
+        pdf = 1 / (x * sigma * np.sqrt(2 * np.pi)) * np.exp(-(np.log(x) - mu) ** 2 / (2 * sigma ** 2))
+        cdf = (1 + sp.special.erf((np.log(x) - mu) / (np.sqrt(2) * sigma))) / 2
+        p_lognormal = make_histogram_plot("Log Normal Distribution (μ=0, σ=0.5)",
+                                          hist, edges, x, pdf, cdf, kde_pdf=None)
+        return p_lognormal
+
+    def bokeh_histogram_overlay_gammma(self,
+                                       data):
+
+        hs = HackerStats()
+        k = 7.5  # k is the shape of the gamma dist
+        theta = 1.0  # theta is the scale of the gamma dist
+        theo_gamma_dist = hs.sample_gamma_dist(k=k, theta=theta, size=len(data)*10)
+        bins = int(np.ceil(hs.get_num_bins_hist(len(data))))
+        hist, edges = np.histogram(data, density=True, bins=bins)
+        x = np.linspace(np.min(data), np.max(data), num=len(data)*10)
+        # x = np.linspace(0.0001, 20.0, 1000)
+        pdf = x ** (k - 1) * np.exp(-x / theta) / (theta ** k * sp.special.gamma(k))
+        cdf = sp.special.gammainc(k, x / theta)
+        p_gamma = make_histogram_plot("Gamma Distribution (k=7.5, θ=1)",
+                                      hist, edges, x, pdf, cdf, kde_pdf=None)
+        return p_gamma
+
+    def bokeh_histogram_overlay_weibull(self,
+                                        data):
+
+        hs = HackerStats()
+        lam, k = 1, 1.25
+        theo_weibull_dist = hs.sample_weibull_dist(lam=lam, k=k, size=len(data)*10)
+        bins = int(np.ceil(hs.get_num_bins_hist(len(data))))
+        hist, edges = np.histogram(data, density=True, bins=bins)
+        x = np.linspace(np.min(data), np.max(data), num=len(data)*10)
+        # x = np.linspace(0.0001, 8, 1000)
+        pdf = (k / lam) * (x / lam) ** (k - 1) * np.exp(-(x / lam) ** k)
+        cdf = 1 - np.exp(-(x / lam) ** k)
+        p_weibull = make_histogram_plot("Weibull Distribution (λ=1, k=1.25)",
+                                        hist, edges, x, pdf, cdf, kde_pdf=None)
+        return p_weibull
+
+    def show_hist_plots(self,
+                        plots_list,
+                        html_output_file,
+                        html_output_file_title):
+
+        output_file(html_output_file, title=html_output_file_title)
+        show(gridplot(plots_list, ncols=2, plot_width=400, plot_height=400, toolbar_location=None))
 
 
+def make_histogram_plot(title,
+                        hist,
+                        edges,
+                        x,
+                        pdf,
+                        cdf,
+                        kde_pdf):
+    """ Name: make_histogram_plot
+        Function: create a histogram plot with the input title, edges,
+                x-axis data, and overlays the PDF and CDF line data.
+        Parameters: title: title of chart
+                    hist: histogram object, for example, returnd from np.histogram()
+                    edges: arrays of x data, edges of bins, returned from np.histogram()
+                    x: x-axis data to plot the histogram.
+                    pdf: Probability Distribution Function: i.e for normal dist, bell curve.
+                    cdf: Cummulative Distribution Function.
+    """
+    p = figure(title=title, tools='', background_fill_color="#fafafa")
+    p.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:],
+           fill_color="navy", line_color="white", alpha=0.5)
+    p.line(x, pdf, line_color="#ff8888", line_width=4, alpha=0.7, legend="PDF")
+    # p.line(x, cdf, line_color="orange", line_width=2, alpha=0.7, legend="CDF")
+    if kde_pdf is not None:
+        p.line(x, kde_pdf, line_color="black", line_width=2, alpha=0.7, legend='Density')
+    p.y_range.start = 0
+    p.legend.location = "center_right"
+    p.legend.background_fill_color = "#fefefe"
+    p.xaxis.axis_label = 'x'
+    p.yaxis.axis_label = 'Pr(x)'
+    p.grid.grid_line_color = "white"
+
+    return p
+
+
+def make_cdf_plot(title, x, cdf, ecdf_x, ecdf_y):
+
+    p = figure(title=title, tools='', background_fill_color="#fafafa")
+    # p.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:],
+    #       fill_color="navy", line_color="white", alpha=0.5)
+    p.line(ecdf_x, ecdf_y, line_color='blue', line_width=2, alpha=0.7, legend="ECDF")
+    p.line(x, cdf, line_color="orange", line_width=2, alpha=0.7, legend="CDF")
+    p.y_range.start = 0
+    p.legend.location = "center_right"
+    p.legend.background_fill_color = "#fefefe"
+    p.xaxis.axis_label = 'x'
+    p.yaxis.axis_label = 'Pr(x)'
+    p.grid.grid_line_color = "white"
+
+    return p
+
+def make_density_plot(title, x, data, bandwidth='scott'):
+
+    kde = stats.gaussian_kde(data, bw_method=bandwidth)
+    y = kde.pdf(x)
+
+
+
+    p = figure(title=title, tools='', background_fill_color="#fafafa")
+    p.axis = ax
+    return p
 
 if __name__ == '__main__':
 
@@ -258,8 +407,3 @@ if __name__ == '__main__':
     return_val = ex_bokeh.bokeh_layout_plots_in_grid(2,
                                                      [2,3,4,5,6])
     print(return_val)
-
-
-
-
-
