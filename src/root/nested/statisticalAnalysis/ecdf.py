@@ -14,13 +14,11 @@ class ECDF(object):
         self.percentiles = None
         self.title = None
 
-        self.logger.info("ECDF.__init__.kwargs: %s", str(kwargs))
-
         for key,value in kwargs.items():
 
             if key == 'data':
                 self.data = value
-                self.logger.info("ECDF.__init__.data: %s", str(type(self.data))) # numpy array
+                # self.logger.info("ECDF.__init__.data: %s", str(type(self.data))) # numpy array
             elif key == 'percentiles':
                 self.percentiles = np.array(value)
                 self.logger.info("ECDF.__init__.percentiles: %s", str(self.percentiles)) # a list

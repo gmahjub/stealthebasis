@@ -8,6 +8,7 @@ from root.nested.SysOs.os_mux import OSMuxImpl
 from root.nested.statisticalAnalysis.stats_tests import StatsTests
 
 import pandas as pd
+import numpy as np
 # import plotly.plotly as py
 # import plotly.graph_objs as go
 
@@ -99,30 +100,50 @@ class TrackStatMomProj:
         self.logger.info('TrackStatMomProj.vectorized_symbols_func(): pulling daily px returns for %s', ticker)
         sm = StatisticalMoments()
         ext_bokeh = ExtendBokeh()
+        px = sm.get_pricing(ticker=ticker, fields=['adjClose'])
         px_rets = sm.get_stock_returns(ticker=ticker)
+        px_log_rets = np.log(1+px_rets)
         hist_plots = []
+        column_plots = []
+        px_line_plot = ext_bokeh.bokeh_px_line_plot(data=px.squeeze())
+        px_rets_plot = ext_bokeh.bokeh_px_line_plot(data=px_rets)
+        # column_plots.append(px_line_plot)
+        # column_plots.append(px_rets_plot)
+        hist_plots.append(px_line_plot)
+        hist_plots.append(px_rets_plot)
         px_rets_normal_ovl, px_rets_normal_cdf = \
             ext_bokeh.bokeh_histogram_overlay_normal(px_rets)
         hist_plots.append(px_rets_normal_ovl)
         hist_plots.append(px_rets_normal_cdf)
-        px_rets_lognormal_ovl = ext_bokeh.bokeh_histogram_overlay_lognormal(px_rets)
+        px_rets_lognormal_ovl, px_rets_lognormal_cdf = \
+            ext_bokeh.bokeh_histogram_overlay_normal(px_log_rets,
+                                                     titles=['Px Log Returns Histogram',
+                                                             'Px Log Returns CDF'])
         hist_plots.append(px_rets_lognormal_ovl)
-        px_rets_gamma_ovl = ext_bokeh.bokeh_histogram_overlay_gammma(px_rets)
-        hist_plots.append(px_rets_gamma_ovl)
+        hist_plots.append(px_rets_lognormal_cdf)
+        # px_rets_gamma_ovl = ext_bokeh.bokeh_histogram_overlay_gammma(px_rets)
+        # hist_plots.append(px_rets_gamma_ovl)
 
         # next, lets do the KS Test, to test for normality. We will do JB Test later.
-        ks_test_stat, p_value = StatsTests.ks_test(rvs = px_rets, dist_size=len(px_rets), cdf='norm')
-        self.logger.info("TrackstatMomProj.vectorized_symbols_func(): KS Test Stat is %s and p_value is %s",
-                         str(ks_test_stat), str(p_value))
-        self.logger.info("TrackstatMomProj.vectorized_symbols_func(): Is KS Test Stat %s as close to 0 as possible"
+        ks_test_stat_raw_rets, p_value_raw_rets = StatsTests.ks_test(rvs = px_rets, dist_size=len(px_rets), cdf='norm')
+        ks_test_stat_log_rets, p_value_log_rets = StatsTests.ks_test(rvs = px_log_rets, dist_size=len(px_log_rets), cdf='norm')
+        self.logger.info("TrackstatMomProj.vectorized_symbols_func(): KS Test Stat (Raw Returns) is %s and p_value is %s",
+                         str(ks_test_stat_raw_rets), str(p_value_raw_rets))
+        self.logger.info("TrackstatMomProj.vectorized_symbols_func(): Is KS Test Stat (Raw Returns) %s as close to 0 as possible"
                          " and p_value %s as close to 1 as possible? If p_value less than 0.05, Null Hypothesis (the"
-                         "two distributions RVS and CDF) are not equal!", str(ks_test_stat), str(p_value))
+                         "two distributions RVS and CDF are equal) is rejected!", str(ks_test_stat_raw_rets), str(p_value_raw_rets))
+        self.logger.info("TrackstatMomProj.vectorized_symbols_func(): KS Test Stat (Log Returns) is %s and p_value is %s",
+                         str(ks_test_stat_log_rets), str(p_value_log_rets))
+        self.logger.info("TrackstatMomProj.vectorized_symbols_func(): Is KS Test Stat (Log Returns) %s as close to 0 as possible"
+                         " and p_value %s as close to 1 as possible? If p_value less than 0.05, the Null Hypothesis (the"
+                         "two distributions RVS and CDF are equal) is rejected!", str(ks_test_stat_log_rets), str(p_value_log_rets))
+
         # px_rets_weibull_ovl = ext_bokeh.bokeh_histogram_overlay_weibull(px_rets)
         # hist_plots.append(px_rets_weibull_ovl)
         html_output_file_title = ticker + '.hist.html'
         html_output_file_path = OSMuxImpl.get_proper_path('/workspace/data/bokeh/html/')
         html_output_file = html_output_file_path + html_output_file_title
-        ext_bokeh.show_hist_plots(hist_plots, html_output_file, html_output_file_title)
+        ext_bokeh.show_hist_plots(hist_plots, column_plots, html_output_file, html_output_file_title)
 
         # below is pyplot functionality - not using pyplot as it requires subscription
         # hist_data = [go.Histogram(y=px_rets)]
@@ -138,5 +159,4 @@ if __name__ == '__main__':
 
     tsmp = TrackStatMomProj(use_iex_trading_symbol_universe=True)
     df, ticker_col_nm = tsmp.get_stock_universe()
-    print(df.head())
     tsmp.get_px_df(df)

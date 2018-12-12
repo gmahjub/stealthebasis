@@ -101,8 +101,8 @@ class StatisticalMoments(object):
     """
     def get_pricing(self,
                     ticker,
-                    start_date,
-                    end_date,
+                    start_date='2010-01-01',
+                    end_date=str(pd.to_datetime('today')).split(' ')[0],
                     fields=['adjOpen', 'adjHigh', 'adjLow', 'adjClose']):
 
         symbols = [ticker]

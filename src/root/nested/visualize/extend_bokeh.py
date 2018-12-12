@@ -2,13 +2,15 @@ from bokeh.plotting import figure, ColumnDataSource
 from bokeh.io import output_file, show
 from bokeh.layouts import row, column, gridplot
 from bokeh.models.widgets import Panel, Tabs
-from bokeh.models import HoverTool
+from bokeh.models import HoverTool, Title
 import numpy as np
+import pandas as pd
 import scipy as sp
 from scipy import stats
 import seaborn as sns
 
 from root.nested.statisticalAnalysis.hacker_stats import HackerStats
+from root.nested.statisticalAnalysis.ecdf import ECDF
 from root.nested import get_logger
 
 
@@ -253,12 +255,15 @@ class ExtendBokeh(object):
         show(figure_obj)
 
     def bokeh_histogram_overlay_normal(self,
-                                       data):
+                                       data,
+                                       titles = ["Px Returns Histogram",
+                                                 "Px Returns CDF"]):
 
         hs = HackerStats()
         mu = np.mean(data)
         sigma = np.std(data)
-        ecdf_obj = hs.plot_simulation_ecdf(data = data, x_label = 'Px Ret', y_label='freq', title='Normal')
+        # ecdf_obj = hs.plot_simulation_ecdf(data = data, x_label = 'Px Ret', y_label='freq', title='Normal')
+        ecdf_obj = ECDF(data=data)
         ecdf_x = ecdf_obj.get_x_data()
         ecdf_y = ecdf_obj.get_y_data()
         bins = int(np.ceil(hs.get_num_bins_hist(len(data))))
@@ -272,10 +277,12 @@ class ExtendBokeh(object):
         kde_pdf = kde.pdf(x)
         # pdf = 1 / (sigma * np.sqrt(2 * np.pi)) * np.exp(-(x - mu) ** 2 / (2 * sigma ** 2))
         # cdf = (1 + sp.special.erf((x - mu) / np.sqrt(2 * sigma ** 2))) / 2
-        p_hist = make_histogram_plot("Normal Distribution (μ=" + str(mu) + ", σ=" + str(sigma) + ")",
+        p_hist = make_histogram_plot(titles[0] + " vs. Normal Distribution PDF", 
+                                     "(μ=" + str(mu) + ", σ=" + str(sigma), 
                                      hist, edges, x, pdf, cdf, kde_pdf)
-        p_cdf = make_cdf_plot("Normal Distribution (μ=" + str(mu) + ", σ=" + str(sigma) + ")",
-                              x, cdf, ecdf_x, ecdf_y)
+        p_cdf = make_cdf_plot(titles[1] + " vs. Normal Distribution CDF",
+                             "(μ=" + str(mu) + ", σ=" + str(sigma), 
+                             x, cdf, ecdf_x, ecdf_y)
         return p_hist, p_cdf
 
     def bokeh_histogram_overlay_lognormal(self,
@@ -284,7 +291,8 @@ class ExtendBokeh(object):
         hs = HackerStats()
         mu = np.mean(data)
         sigma = np.std(data)
-        ecdf_obj = hs.plot_simulation_ecdf(data=data, x_label='Px Ret', y_label='freq', title='LogNormal')
+        # ecdf_obj = hs.plot_simulation_ecdf(data=data, x_label='Px Ret', y_label='freq', title='LogNormal')
+        ecdf_obj = ECDF(data=data)
         ecdf_x = ecdf_obj.get_x_data()
         ecdf_y = ecdf_obj.get_y_data()
 
@@ -331,16 +339,28 @@ class ExtendBokeh(object):
                                         hist, edges, x, pdf, cdf, kde_pdf=None)
         return p_weibull
 
+    def bokeh_px_line_plot(self,
+                           data):
+
+        x_axis = pd.to_datetime(data.index)
+        p = figure(plot_width=600, plot_height=400, x_axis_type ="datetime")
+        p.line(x_axis, data, color="navy", alpha=0.5)
+
+        return p
+
     def show_hist_plots(self,
-                        plots_list,
+                        grid_plots_list,
+                        column_plots_tuple,
                         html_output_file,
                         html_output_file_title):
 
         output_file(html_output_file, title=html_output_file_title)
-        show(gridplot(plots_list, ncols=2, plot_width=400, plot_height=400, toolbar_location=None))
+        gp = gridplot(grid_plots_list, ncols=2, plot_width=600, plot_height=600, toolbar_location=None)
+        show(gp)
 
 
 def make_histogram_plot(title,
+                        subtitle,
                         hist,
                         edges,
                         x,
@@ -357,7 +377,9 @@ def make_histogram_plot(title,
                     pdf: Probability Distribution Function: i.e for normal dist, bell curve.
                     cdf: Cummulative Distribution Function.
     """
-    p = figure(title=title, tools='', background_fill_color="#fafafa")
+    p = figure(tools='', background_fill_color="#fafafa")
+    p.add_layout(Title(text=subtitle, text_font_style="italic"), place='above')
+    p.add_layout(Title(text=title, text_font_size="14pt"), place='above')
     p.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:],
            fill_color="navy", line_color="white", alpha=0.5)
     p.line(x, pdf, line_color="#ff8888", line_width=4, alpha=0.7, legend="PDF")
@@ -374,9 +396,12 @@ def make_histogram_plot(title,
     return p
 
 
-def make_cdf_plot(title, x, cdf, ecdf_x, ecdf_y):
+def make_cdf_plot(title, subtitle, x, cdf, ecdf_x, ecdf_y):
 
-    p = figure(title=title, tools='', background_fill_color="#fafafa")
+    # p = figure(title=title, tools='', background_fill_color="#fafafa")
+    p = figure(tools='', background_fill_color="#fafafa")
+    p.add_layout(Title(text=subtitle, text_font_style="italic"), place='above')
+    p.add_layout(Title(text=title, text_font_size="14pt"), place='above')
     # p.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:],
     #       fill_color="navy", line_color="white", alpha=0.5)
     p.line(ecdf_x, ecdf_y, line_color='blue', line_width=2, alpha=0.7, legend="ECDF")
@@ -390,16 +415,6 @@ def make_cdf_plot(title, x, cdf, ecdf_x, ecdf_y):
 
     return p
 
-def make_density_plot(title, x, data, bandwidth='scott'):
-
-    kde = stats.gaussian_kde(data, bw_method=bandwidth)
-    y = kde.pdf(x)
-
-
-
-    p = figure(title=title, tools='', background_fill_color="#fafafa")
-    p.axis = ax
-    return p
 
 if __name__ == '__main__':
 
