@@ -53,16 +53,20 @@ class TiingoDataObject(DataObject):
 
     def get_all_px_single(self,
                           sym,
-                          start_date,
-                          end_date):
+                          start_date=None,
+                          end_date=None):
 
         dict_of_dataframes = {sym: self.get_px_all_tiingo(sym)}
         df = pd.DataFrame(dict_of_dataframes[sym])
         df.reset_index(inplace=True)
         df.set_index('date', inplace=True)
         df.to_csv(self.local_data_file_pwd + str(sym) + self.local_file_type, encoding = 'utf-8')
-        
-        return (df.loc[start_date:end_date])
+        if start_date is None:
+            return df
+        elif end_date is None:
+            return df.loc[start_date:]
+        else:
+            return (df.loc[start_date:end_date])
 
     def get_all_px_batch(self):
 
