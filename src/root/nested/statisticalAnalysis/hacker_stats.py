@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from root.nested.statisticalAnalysis.ecdf import ECDF
 from root.nested import get_logger
+from root.nested.SysOs.os_mux import OSMuxImpl
 
 
 class HackerStats(object):
@@ -247,9 +248,9 @@ class HackerStats(object):
            in the data from csv into Panda's dataframe, and then return individual columns
            of data as numpy arrays.
         """
-
-        finch_beak_1975 = "C:\\Users\\ghazy\\workspace\\data\\datacamp\\finch_beaks_1975.csv"
-        finch_beak_2012 = "C:\\Users\\ghazy\\workspace\\data\\datacamp\\finch_beaks_2012.csv"
+        datacamp_dir = OSMuxImpl.get_proper_path(user_provided_path='/workspace/data/datacamp/')
+        finch_beak_1975 = datacamp_dir + "finch_beaks_1975.csv"
+        finch_beak_2012 = datacamp_dir + "finch_beaks_2012.csv"
         df_1975 = pd.read_csv(finch_beak_1975, sep = ',', header = 0)
         df_2012 = pd.read_csv(finch_beak_2012, sep = ',', header = 0)
         bd_1975 = df_1975.bdepth.values
@@ -261,8 +262,9 @@ class HackerStats(object):
 
     def prepare_heritability_case_study_data(self):
 
-        scandens_csv = "C:\\Users\\ghazy\\workspace\\data\\datacamp\\scandens_beak_depth_heredity.csv"
-        fortis_csv = "C:\\Users\\ghazy\\workspace\\data\\datacamp\\fortis_beak_depth_heredity.csv"
+        datacamp_dir = OSMuxImpl.get_proper_path(user_provided_path='/workspace/data/datacamp/')
+        scandens_csv = datacamp_dir + "scandens_beak_depth_heredity.csv"
+        fortis_csv = datacamp_dir + "fortis_beak_depth_heredity.csv"
         df_scandens = pd.read_csv(scandens_csv, sep = ",", header = 0)
         df_fortis = pd.read_csv(fortis_csv, sep = ",", header = 0)
         bd_offspring_scandens = df_scandens.mid_offspring.values

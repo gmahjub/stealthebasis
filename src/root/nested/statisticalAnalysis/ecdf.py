@@ -29,6 +29,8 @@ class ECDF(object):
         n = len(self.data)
         x = np.sort(self.data)
         y = np.arange(1, n+1) / n
+        self.mu = np.mean(self.data)
+        self.sigma = np.std(self.data)
 
         if self.percentiles is None:
             self.percentiles = np.array([2.5,25,50,75,97.5])
@@ -63,6 +65,18 @@ class ECDF(object):
     def get_y_data(self):
 
         return self.y_data
+
+    def get_data_ptiles(self):
+
+        return self.data_ptiles
+
+    def get_mu(self):
+
+        return self.mu
+
+    def get_sigma(self):
+
+        return self.sigma
 
 
 if __name__ == '__main__':

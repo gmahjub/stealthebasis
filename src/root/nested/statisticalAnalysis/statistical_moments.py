@@ -167,6 +167,35 @@ class StatisticalMoments(object):
         plt.ylabel(str(window_size) + " Period Rolling Skew")
         plt.show()
 
+    @staticmethod
+    def remove_outliers(px_returns_series):
+
+        """ This function removes any returns from the dataframe that are beyond 3 sigma,
+        thereby making the returns series potentially normal."""
+        px_rets_series = pd.Series(px_returns_series)
+        mu = px_rets_series.mean()
+        sigma = px_rets_series.std()
+        top = mu+3*sigma
+        bottom = mu-3*sigma
+        bool_non_outliers = (px_rets_series <= top) | (px_rets_series >= bottom)
+        # demean the new series, and add the old mean, so that we keep the mean constant.
+        no_outliers = px_returns_series[bool_non_outliers].sort_index()
+        no_outliers = no_outliers - no_outliers.mean() + mu
+        print (no_outliers.mean(), mu, no_outliers.std(), sigma)
+        return no_outliers
+
+    @staticmethod
+    def get_outliers(px_return_series):
+
+        px_rets_series = pd.Series(px_return_series)
+        mu = px_rets_series.mean()
+        sigma = px_rets_series.std()
+        top = mu+3*sigma
+        bottom = mu-3*sigma
+        top_outliers = px_rets_series[px_rets_series > top]
+        bottom_outliers = px_rets_series[px_rets_series < bottom]
+        return top_outliers.append(bottom_outliers).sort_index()
+
     """EXAMPLE function: Return the following types of variance metrics:
         Range, Mean Absolute Deviation, Variance, Standard Deviation, Semivariance,
         and Semideviation.
@@ -199,16 +228,14 @@ class StatisticalMoments(object):
                "Semivariance (upside var): ", semi_var_highs, '\n',
                "Semi-deviation (upside vol): ", np.sqrt(semi_var_highs))
 
-
-    def random_numbers_test(self):
+    @staticmethod
+    def random_numbers_test():
 
         hs = HackerStats()
         normal_dist_sample = hs.sample_normal_dist(0.0, 0.5, size=1000)
         hs.check_normality(normal_dist_sample)
         bins = hs.get_num_bins_hist(len(normal_dist_sample))
         hist, edges = np.histogram(normal_dist_sample, bins=bins, density=True)
-
-
 
 
 if __name__ == '__main__':

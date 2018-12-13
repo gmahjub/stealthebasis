@@ -2,20 +2,22 @@ from bokeh.plotting import figure, ColumnDataSource
 from bokeh.io import output_file, show
 from bokeh.layouts import row, column, gridplot
 from bokeh.models.widgets import Panel, Tabs
-from bokeh.models import HoverTool, Title
+from bokeh.models import HoverTool, Title, BoxAnnotation, Span
 import numpy as np
 import pandas as pd
 import scipy as sp
 from scipy import stats
-import seaborn as sns
 
 from root.nested.statisticalAnalysis.hacker_stats import HackerStats
+from root.nested.statisticalAnalysis.statistical_moments import StatisticalMoments
 from root.nested.statisticalAnalysis.ecdf import ECDF
 from root.nested import get_logger
 
 
 class ExtendBokeh(object):
     """description of class"""
+
+    LOGGER = get_logger()
 
     def __init__(self, **kwargs):
 
@@ -254,20 +256,25 @@ class ExtendBokeh(object):
         output_file('hover.html')
         show(figure_obj)
 
-    def bokeh_histogram_overlay_normal(self,
-                                       data,
-                                       titles = ["Px Returns Histogram",
-                                                 "Px Returns CDF"]):
+    @staticmethod
+    def bokeh_histogram_overlay_normal(data,
+                                       titles=["Px Returns Histogram",
+                                               "Px Returns CDF",
+                                               "Px Returns (No Outliers) CDF"]):
 
         hs = HackerStats()
         mu = np.mean(data)
         sigma = np.std(data)
+        data_outliers_removed = StatisticalMoments.remove_outliers(px_returns_series=data)
+        print (data_outliers_removed.describe())
         # ecdf_obj = hs.plot_simulation_ecdf(data = data, x_label = 'Px Ret', y_label='freq', title='Normal')
-        ecdf_obj = ECDF(data=data)
+        ecdf_obj = ECDF(data=data, percentiles=[0.3, 5.0, 32.0, 68.0, 95.0, 99.7])
         ecdf_x = ecdf_obj.get_x_data()
         ecdf_y = ecdf_obj.get_y_data()
+        ptiles = ecdf_obj.get_data_ptiles()
         bins = int(np.ceil(hs.get_num_bins_hist(len(data))))
-        self.logger.info("ExtendBokeh.bokeh_histogram_overlay_normal(): number of bins calculated is %s", str(bins))
+        ExtendBokeh.LOGGER.info("ExtendBokeh.bokeh_histogram_overlay_normal(): ptiles are %s", str(ptiles))
+        ExtendBokeh.LOGGER.info("ExtendBokeh.bokeh_histogram_overlay_normal(): number of bins calculated is %s", str(bins))
         hist, edges = np.histogram(data, bins=bins, density=True)
         x = np.linspace(stats.norm.ppf(0.001, loc=mu, scale=sigma),
                         stats.norm.ppf(0.999, loc=mu, scale=sigma), 1000)
@@ -279,14 +286,24 @@ class ExtendBokeh(object):
         # cdf = (1 + sp.special.erf((x - mu) / np.sqrt(2 * sigma ** 2))) / 2
         p_hist = make_histogram_plot(titles[0] + " vs. Normal Distribution PDF", 
                                      "(μ=" + str(mu) + ", σ=" + str(sigma), 
-                                     hist, edges, x, pdf, cdf, kde_pdf)
+                                     hist, edges, x, pdf, cdf, kde_pdf, mu, sigma)
         p_cdf = make_cdf_plot(titles[1] + " vs. Normal Distribution CDF",
                              "(μ=" + str(mu) + ", σ=" + str(sigma), 
-                             x, cdf, ecdf_x, ecdf_y)
-        return p_hist, p_cdf
+                             x, cdf, ecdf_x, ecdf_y, mu, sigma, ptiles)
+        ecdf_obj = ECDF(data=data_outliers_removed, percentiles=[0.3, 5.0, 32.0, 68.0, 95.0, 99.7])
+        ecdf_x = ecdf_obj.get_x_data()
+        ecdf_y = ecdf_obj.get_y_data()
+        ptiles = ecdf_obj.get_data_ptiles()
+        mu = ecdf_obj.get_mu()
+        sigma = ecdf_obj.get_sigma()
+        print(titles)
+        p_cdf_no_outliers = make_cdf_plot(titles[2] + " vs. Normal Distribution CDF",
+                                               "(μ=" + str(mu) + ", σ=" + str(sigma),
+                                               x, cdf, ecdf_x, ecdf_y, mu, sigma, ptiles)
+        return p_hist, p_cdf, p_cdf_no_outliers
 
-    def bokeh_histogram_overlay_lognormal(self,
-                                          data):
+    @staticmethod
+    def bokeh_histogram_overlay_lognormal(data):
 
         hs = HackerStats()
         mu = np.mean(data)
@@ -339,8 +356,8 @@ class ExtendBokeh(object):
                                         hist, edges, x, pdf, cdf, kde_pdf=None)
         return p_weibull
 
-    def bokeh_px_line_plot(self,
-                           data):
+    @staticmethod
+    def bokeh_px_line_plot(data):
 
         x_axis = pd.to_datetime(data.index)
         p = figure(plot_width=600, plot_height=400, x_axis_type ="datetime")
@@ -348,8 +365,38 @@ class ExtendBokeh(object):
 
         return p
 
-    def show_hist_plots(self,
-                        grid_plots_list,
+    @staticmethod
+    def bokeh_px_returns_plot(data):
+
+        x_axis = pd.to_datetime(data.index)
+        ecdf_obj = ECDF(data=data, percentiles=[0.3, 5.0, 32.0, 68.0, 95.0, 99.7])
+        mu = ecdf_obj.get_mu()
+        sigma = ecdf_obj.get_sigma()
+        p = figure(plot_width=600, plot_height=400, x_axis_type='datetime')
+        p.line(x_axis, data, color='navy', alpha=0.5)
+
+        minus_three_sigma_box = BoxAnnotation(bottom=mu-3*sigma, top=mu-2*sigma, fill_alpha=0.1,
+                                              fill_color='red')
+        minus_two_sigma_box = BoxAnnotation(bottom=mu-2*sigma, top=mu-sigma, fill_alpha=0.1,
+                                            fill_color='lightcoral')
+        minus_one_sigma_box = BoxAnnotation(bottom=mu-sigma, top=mu, fill_alpha=0.1, fill_color='lightsalmon')
+        plus_three_sigma_box = BoxAnnotation(top=mu+3*sigma, bottom=mu+2*sigma, fill_alpha=0.1,
+                                             fill_color='green')
+        plus_two_sigma_box = BoxAnnotation(top=mu+2*sigma, bottom=mu+sigma, fill_alpha=0.1,
+                                           fill_color='limegreen')
+        plus_one_sigma_box = BoxAnnotation(top=mu+sigma, bottom=mu, fill_alpha=0.1, fill_color='palegreen')
+
+        p.add_layout(minus_three_sigma_box)
+        p.add_layout(minus_two_sigma_box)
+        p.add_layout(minus_one_sigma_box)
+        p.add_layout(plus_three_sigma_box)
+        p.add_layout(plus_two_sigma_box)
+        p.add_layout(plus_one_sigma_box)
+
+        return p
+
+    @staticmethod
+    def show_hist_plots(grid_plots_list,
                         column_plots_tuple,
                         html_output_file,
                         html_output_file_title):
@@ -366,7 +413,9 @@ def make_histogram_plot(title,
                         x,
                         pdf,
                         cdf,
-                        kde_pdf):
+                        kde_pdf,
+                        mu,
+                        sigma):
     """ Name: make_histogram_plot
         Function: create a histogram plot with the input title, edges,
                 x-axis data, and overlays the PDF and CDF line data.
@@ -378,6 +427,19 @@ def make_histogram_plot(title,
                     cdf: Cummulative Distribution Function.
     """
     p = figure(tools='', background_fill_color="#fafafa")
+
+    minus_three_sigma_box = BoxAnnotation(left=mu-3*sigma, right=mu-2*sigma, fill_alpha=0.1, fill_color='red')
+    minus_two_sigma_box = BoxAnnotation(left=mu-2*sigma, right=mu-sigma, fill_alpha=0.1, fill_color='lightcoral')
+    minus_one_sigma_box = BoxAnnotation(left=mu-sigma, right=mu, fill_alpha=0.1, fill_color='lightsalmon')
+    plus_three_sigma_box = BoxAnnotation(right=mu+3*sigma, left=mu+2*sigma, fill_alpha=0.1, fill_color='green')
+    plus_two_sigma_box = BoxAnnotation(right=mu+2*sigma, left=mu+sigma, fill_alpha=0.1, fill_color='limegreen')
+    plus_one_sigma_box = BoxAnnotation(right=mu+sigma, left=mu, fill_alpha=0.1, fill_color='palegreen')
+    p.add_layout(minus_three_sigma_box)
+    p.add_layout(minus_two_sigma_box)
+    p.add_layout(minus_one_sigma_box)
+    p.add_layout(plus_three_sigma_box)
+    p.add_layout(plus_two_sigma_box)
+    p.add_layout(plus_one_sigma_box)
     p.add_layout(Title(text=subtitle, text_font_style="italic"), place='above')
     p.add_layout(Title(text=title, text_font_size="14pt"), place='above')
     p.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:],
@@ -395,11 +457,30 @@ def make_histogram_plot(title,
 
     return p
 
-
-def make_cdf_plot(title, subtitle, x, cdf, ecdf_x, ecdf_y):
+def make_cdf_plot(title, subtitle, x, cdf, ecdf_x, ecdf_y, mu, sigma, ptiles):
 
     # p = figure(title=title, tools='', background_fill_color="#fafafa")
     p = figure(tools='', background_fill_color="#fafafa")
+    for ptile in ptiles:
+        ptile_span = Span(location=ptile,
+                          dimension='height',
+                          line_color='red',
+                          line_dash='dashed',
+                          line_width=3)
+        p.add_layout(ptile_span)
+
+    minus_three_sigma_box = BoxAnnotation(left=mu - 3 * sigma, right=mu - 2 * sigma, fill_alpha=0.1, fill_color='red')
+    minus_two_sigma_box = BoxAnnotation(left=mu - 2 * sigma, right=mu - sigma, fill_alpha=0.1, fill_color='lightcoral')
+    minus_one_sigma_box = BoxAnnotation(left=mu - sigma, right=mu, fill_alpha=0.1, fill_color='lightsalmon')
+    plus_three_sigma_box = BoxAnnotation(right=mu + 3 * sigma, left=mu + 2 * sigma, fill_alpha=0.1, fill_color='green')
+    plus_two_sigma_box = BoxAnnotation(right=mu + 2 * sigma, left=mu + sigma, fill_alpha=0.1, fill_color='limegreen')
+    plus_one_sigma_box = BoxAnnotation(right=mu + sigma, left=mu, fill_alpha=0.1, fill_color='palegreen')
+    p.add_layout(minus_three_sigma_box)
+    p.add_layout(minus_two_sigma_box)
+    p.add_layout(minus_one_sigma_box)
+    p.add_layout(plus_three_sigma_box)
+    p.add_layout(plus_two_sigma_box)
+    p.add_layout(plus_one_sigma_box)
     p.add_layout(Title(text=subtitle, text_font_style="italic"), place='above')
     p.add_layout(Title(text=title, text_font_size="14pt"), place='above')
     # p.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:],

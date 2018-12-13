@@ -99,28 +99,30 @@ class TrackStatMomProj:
         ticker = row.name
         self.logger.info('TrackStatMomProj.vectorized_symbols_func(): pulling daily px returns for %s', ticker)
         sm = StatisticalMoments()
-        ext_bokeh = ExtendBokeh()
         px = sm.get_pricing(ticker=ticker, fields=['adjClose'])
         px_rets = sm.get_stock_returns(ticker=ticker)
         px_log_rets = np.log(1+px_rets)
         hist_plots = []
         column_plots = []
-        px_line_plot = ext_bokeh.bokeh_px_line_plot(data=px.squeeze())
-        px_rets_plot = ext_bokeh.bokeh_px_line_plot(data=px_rets)
+        px_line_plot = ExtendBokeh.bokeh_px_line_plot(data=px.squeeze())
+        px_rets_plot = ExtendBokeh.bokeh_px_returns_plot(data=px_rets)
         # column_plots.append(px_line_plot)
         # column_plots.append(px_rets_plot)
         hist_plots.append(px_line_plot)
         hist_plots.append(px_rets_plot)
-        px_rets_normal_ovl, px_rets_normal_cdf = \
-            ext_bokeh.bokeh_histogram_overlay_normal(px_rets)
+        px_rets_normal_ovl, px_rets_normal_cdf, px_rets_normal_cdf_no_outliers = \
+            ExtendBokeh.bokeh_histogram_overlay_normal(px_rets)
+        hist_plots.append(px_rets_normal_cdf_no_outliers)
         hist_plots.append(px_rets_normal_ovl)
         hist_plots.append(px_rets_normal_cdf)
-        px_rets_lognormal_ovl, px_rets_lognormal_cdf = \
-            ext_bokeh.bokeh_histogram_overlay_normal(px_log_rets,
-                                                     titles=['Px Log Returns Histogram',
-                                                             'Px Log Returns CDF'])
+        px_rets_lognormal_ovl, px_rets_lognormal_cdf, px_rets_lognormal_cdf_no_outliers = \
+            ExtendBokeh.bokeh_histogram_overlay_normal(px_log_rets,
+                                                       titles=['Px Log Returns Histogram',
+                                                               'Px Log Returns CDF',
+                                                               'Px Log Returns (No Outliers) CDF'])
         hist_plots.append(px_rets_lognormal_ovl)
         hist_plots.append(px_rets_lognormal_cdf)
+        hist_plots.append(px_rets_lognormal_cdf_no_outliers)
         # px_rets_gamma_ovl = ext_bokeh.bokeh_histogram_overlay_gammma(px_rets)
         # hist_plots.append(px_rets_gamma_ovl)
 
@@ -143,7 +145,7 @@ class TrackStatMomProj:
         html_output_file_title = ticker + '.hist.html'
         html_output_file_path = OSMuxImpl.get_proper_path('/workspace/data/bokeh/html/')
         html_output_file = html_output_file_path + html_output_file_title
-        ext_bokeh.show_hist_plots(hist_plots, column_plots, html_output_file, html_output_file_title)
+        ExtendBokeh.show_hist_plots(hist_plots, column_plots, html_output_file, html_output_file_title)
 
         # below is pyplot functionality - not using pyplot as it requires subscription
         # hist_data = [go.Histogram(y=px_rets)]
