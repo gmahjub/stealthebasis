@@ -259,14 +259,11 @@ class ExtendBokeh(object):
     @staticmethod
     def bokeh_histogram_overlay_normal(data,
                                        titles=["Px Returns Histogram",
-                                               "Px Returns CDF",
-                                               "Px Returns (No Outliers) CDF"]):
+                                               "Px Returns CDF"]):
 
         hs = HackerStats()
         mu = np.mean(data)
         sigma = np.std(data)
-        data_outliers_removed = StatisticalMoments.remove_outliers(px_returns_series=data)
-        print (data_outliers_removed.describe())
         # ecdf_obj = hs.plot_simulation_ecdf(data = data, x_label = 'Px Ret', y_label='freq', title='Normal')
         ecdf_obj = ECDF(data=data, percentiles=[0.3, 5.0, 32.0, 68.0, 95.0, 99.7])
         ecdf_x = ecdf_obj.get_x_data()
@@ -285,22 +282,14 @@ class ExtendBokeh(object):
         # pdf = 1 / (sigma * np.sqrt(2 * np.pi)) * np.exp(-(x - mu) ** 2 / (2 * sigma ** 2))
         # cdf = (1 + sp.special.erf((x - mu) / np.sqrt(2 * sigma ** 2))) / 2
         p_hist = make_histogram_plot(titles[0] + " vs. Normal Distribution PDF", 
-                                     "(μ=" + str(mu) + ", σ=" + str(sigma), 
+                                     "Avg. Period Return=" +
+                                     str("{:.4f}".format(mu*100.0)) + ", Return Variance=" + str("{:.4f}".format(sigma*100.0)),
                                      hist, edges, x, pdf, cdf, kde_pdf, mu, sigma)
         p_cdf = make_cdf_plot(titles[1] + " vs. Normal Distribution CDF",
-                             "(μ=" + str(mu) + ", σ=" + str(sigma), 
-                             x, cdf, ecdf_x, ecdf_y, mu, sigma, ptiles)
-        ecdf_obj = ECDF(data=data_outliers_removed, percentiles=[0.3, 5.0, 32.0, 68.0, 95.0, 99.7])
-        ecdf_x = ecdf_obj.get_x_data()
-        ecdf_y = ecdf_obj.get_y_data()
-        ptiles = ecdf_obj.get_data_ptiles()
-        mu = ecdf_obj.get_mu()
-        sigma = ecdf_obj.get_sigma()
-        print(titles)
-        p_cdf_no_outliers = make_cdf_plot(titles[2] + " vs. Normal Distribution CDF",
-                                               "(μ=" + str(mu) + ", σ=" + str(sigma),
-                                               x, cdf, ecdf_x, ecdf_y, mu, sigma, ptiles)
-        return p_hist, p_cdf, p_cdf_no_outliers
+                              "Avg. Period Return=" +
+                              str("{:.4f}".format(mu*100.0)) + ", Return Variance=" + str("{:.4f}".format(sigma*100.0)),
+                              x, cdf, ecdf_x, ecdf_y, mu, sigma, ptiles)
+        return p_hist, p_cdf
 
     @staticmethod
     def bokeh_histogram_overlay_lognormal(data):
@@ -357,22 +346,30 @@ class ExtendBokeh(object):
         return p_weibull
 
     @staticmethod
-    def bokeh_px_line_plot(data):
+    def bokeh_px_line_plot(data,
+                           title=['Px Chart'],
+                           subtitle=['']):
 
         x_axis = pd.to_datetime(data.index)
         p = figure(plot_width=600, plot_height=400, x_axis_type ="datetime")
+        p.add_layout(Title(text=subtitle[0], text_font_style="italic"), place='above')
+        p.add_layout(Title(text=title[0], text_font_size="14pt"), place='above')
         p.line(x_axis, data, color="navy", alpha=0.5)
 
         return p
 
     @staticmethod
-    def bokeh_px_returns_plot(data):
+    def bokeh_px_returns_plot(data,
+                              title=['Px Returns Chart'],
+                              subtitle=['']):
 
         x_axis = pd.to_datetime(data.index)
         ecdf_obj = ECDF(data=data, percentiles=[0.3, 5.0, 32.0, 68.0, 95.0, 99.7])
         mu = ecdf_obj.get_mu()
         sigma = ecdf_obj.get_sigma()
         p = figure(plot_width=600, plot_height=400, x_axis_type='datetime')
+        p.add_layout(Title(text=subtitle[0], text_font_style="italic"), place='above')
+        p.add_layout(Title(text=title[0], text_font_size="14pt"), place='above')
         p.line(x_axis, data, color='navy', alpha=0.5)
 
         minus_three_sigma_box = BoxAnnotation(bottom=mu-3*sigma, top=mu-2*sigma, fill_alpha=0.1,
@@ -397,7 +394,6 @@ class ExtendBokeh(object):
 
     @staticmethod
     def show_hist_plots(grid_plots_list,
-                        column_plots_tuple,
                         html_output_file,
                         html_output_file_title):
 

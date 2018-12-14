@@ -5,10 +5,12 @@ import scipy.stats as stats
 from statsmodels.stats.stattools import jarque_bera
 from root.nested.dataAccess.tiingo_data_object import TiingoDataObject
 from root.nested.statisticalAnalysis.hacker_stats import HackerStats
-
+from root.nested import get_logger
 
 class StatisticalMoments(object):
     """description of class"""
+
+    LOGGER = get_logger()
 
     def __init__(self, **kwargs):
         return super().__init__(**kwargs)
@@ -168,46 +170,85 @@ class StatisticalMoments(object):
         plt.show()
 
     @staticmethod
-    def remove_outliers(px_returns_series):
+    def remove_outliers_from_normal_dist(px_returns_series,
+                                         sigma_multiplier=3.0):
 
         """ This function removes any returns from the dataframe that are beyond 3 sigma,
         thereby making the returns series potentially normal."""
         px_rets_series = pd.Series(px_returns_series)
         mu = px_rets_series.mean()
         sigma = px_rets_series.std()
-        top = mu+3*sigma
-        bottom = mu-3*sigma
+        top = mu+sigma_multiplier*sigma
+        bottom = mu-sigma_multiplier*sigma
         bool_non_outliers = (px_rets_series <= top) | (px_rets_series >= bottom)
-        # demean the new series, and add the old mean, so that we keep the mean constant.
         no_outliers = px_returns_series[bool_non_outliers].sort_index()
-        no_outliers = no_outliers - no_outliers.mean() + mu
-        print (no_outliers.mean(), mu, no_outliers.std(), sigma)
         return no_outliers
 
     @staticmethod
-    def get_outliers(px_return_series):
+    def remove_outliers_from_non_normal_dist(px_returns_series,
+                                             k_IQR = 1.5):
 
-        px_rets_series = pd.Series(px_return_series)
+        """ Here we will use the IQR method. To classify outliers liberally, use k_IQR = 1.5
+         To classify outliers very selectively, use k_IQR = 3.0"""
+        num_obs = int(px_returns_series.describe()['count'])
+        q25 = px_returns_series.describe()['25%']
+        q75 = px_returns_series.describe()['75%']
+        iqr = q75 - q25
+        # calculate the outlier cutoff
+        cut_off = iqr * k_IQR
+        lower, upper = q25 - cut_off, q75 + cut_off
+        # identify outliers
+        outliers = px_returns_series[px_returns_series < lower]
+        outliers = outliers.append(px_returns_series[px_returns_series > upper]).sort_index()
+        StatisticalMoments.LOGGER.info('StatisticalMoments.remove_outliers_from_non_normal_dist(): '
+                                       'Identified Outliers (Series): %d' % int(outliers.describe()['count']))
+        percent_outliers = int(outliers.describe()['count'])/num_obs*100.0
+        StatisticalMoments.LOGGER.info('StatisticalMoments.remove_outliers_from_non_normal_dist(): '
+                                       'Percent Outliers: %.3f%s' % (percent_outliers, '%'))
+        # remove outliers
+        outliers_removed = px_returns_series[~(px_returns_series.isin(outliers))]
+        StatisticalMoments.LOGGER.info('StatisticalMoments.remove_outliers_from_non_normal_dist(): '
+                                       'Non-outlier observations (Series): %d' % len(outliers_removed))
+        return outliers_removed
+
+    @staticmethod
+    def get_outliers_normal_dist(px_returns_series):
+
+        px_rets_series = pd.Series(px_returns_series)
         mu = px_rets_series.mean()
         sigma = px_rets_series.std()
         top = mu+3*sigma
         bottom = mu-3*sigma
         top_outliers = px_rets_series[px_rets_series > top]
         bottom_outliers = px_rets_series[px_rets_series < bottom]
+
         return top_outliers.append(bottom_outliers).sort_index()
 
-    """EXAMPLE function: Return the following types of variance metrics:
-        Range, Mean Absolute Deviation, Variance, Standard Deviation, Semivariance,
-        and Semideviation.
-        Parameter "semivar_cutoff" specifies where in the data to split high and low. For example,
-        if we want to calculate volatility for a stock separately for upside moves and downside moves,
-        we would set the semivar_cutoff to 0.0 (where data is a numpy array of returns).
-        
-    """
+    @staticmethod
+    def get_outliers_non_normal_dist(px_returns_series,
+                                     k_IQR):
+
+        q25 = px_returns_series.describe()['25%']
+        q75 = px_returns_series.describe()['75%']
+        iqr = q75 - q25
+        # calculate the outlier cutoff
+        cut_off = iqr * k_IQR
+        lower, upper = q25 - cut_off, q75 + cut_off
+        outliers = px_returns_series[px_returns_series < lower]
+
+        return outliers.append(px_returns_series[px_returns_series > upper]).sort_index()
+
     def calc_variance_metrics_example(self,
                                       data,
                                       semivar_cutoff):
 
+        """EXAMPLE function: Return the following types of variance metrics:
+                Range, Mean Absolute Deviation, Variance, Standard Deviation, Semivariance,
+                and Semideviation.
+                Parameter "semivar_cutoff" specifies where in the data to split high and low. For example,
+                if we want to calculate volatility for a stock separately for upside moves and downside moves,
+                we would set the semivar_cutoff to 0.0 (where data is a numpy array of returns).
+        """
         mu = np.mean(data)
         dist_range = np.ptp(data)
         abs_deviation = [np.abs(mu - x) for x in data]
