@@ -9,6 +9,7 @@ from root.nested.statisticalAnalysis.stats_tests import StatsTests
 
 import pandas as pd
 import numpy as np
+import scipy.stats as stats
 # import plotly.plotly as py
 # import plotly.graph_objs as go
 
@@ -18,7 +19,8 @@ class TrackStatMomProj:
     def __init__(self,
                  stock_universe_filename='Russ3K_holdings',
                  use_iex_trading_symbol_universe=False,
-                 sec_type_list = ['cs', 'et']):
+                 sec_type_list = ['cs', 'et'],
+                 daily_window_sizes = [30, 60, 90, 120, 180, 270]):
 
         self.logger = get_logger()
         self.stock_universe_data = None
@@ -26,6 +28,7 @@ class TrackStatMomProj:
         self.use_iex_trading_symbol_universe = use_iex_trading_symbol_universe
         self.sec_type_list = sec_type_list
         self.plotly_histograms_dir = OSMuxImpl.get_proper_path('/workspace/data/plotly/histograms/')
+        self.daily_window_sizes = daily_window_sizes
 
     """ get_pricing: main function to retrieve daily price data
             The source of this data is currently Tiingo. 
@@ -117,20 +120,44 @@ class TrackStatMomProj:
         self.logger.info('TrackStatMomProj.vectorized_symbols_func(): pulling daily px returns for %s', ticker)
         sm = StatisticalMoments()
         px = sm.get_pricing(ticker=ticker, fields=['adjClose'])
+
         px_rets = sm.get_stock_returns(ticker=ticker)
+        px_rets.rename(px_rets.name + '_px_rets', inplace=True)
 
+        sem = lambda px_ret: px_ret.std() / np.sqrt(len(px_ret))
+
+        all_df_to_concat = [px, px_rets]
+        for window_size in self.daily_window_sizes:
+            rolling_df = px_rets.rolling(window=window_size).agg({"mean_ret": np.mean,
+                                                                  "std_ret": np.std,
+                                                                  "sem_ret": sem,
+                                                                  "skew_ret": stats.skew,
+                                                                  "kurtosis_ret": stats.kurtosis})
+            rolling_df.columns = map(lambda col_nm: str(window_size) + 'D_' + col_nm, rolling_df.columns)
+            rolling_df = rolling_df.fillna(method='bfill')
+            all_df_to_concat.append(rolling_df)
+
+        df = pd.concat(all_df_to_concat, axis = 1)[1:]
+        px_ret_type_list = list(filter(lambda col_nm: ('_px_rets' in col_nm) is True, df.columns.values))
         p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf = TrackStatMomProj.outlier_analysis(px_rets)
-
         px_log_rets = np.log(1+px_rets)
         hist_plots = []
-        px_line_plot = ExtendBokeh.bokeh_px_line_plot(data=px.squeeze(),
+        px_line_plot = ExtendBokeh.bokeh_px_line_plot(data=df,#data=px.squeeze(),
                                                       title=[co_nm + ' Px Chart'],
                                                       subtitle=["Exchange Ticker: " + ticker])
-        px_rets_plot = ExtendBokeh.bokeh_px_returns_plot(data=px_rets,
+        px_rets_line_plot = ExtendBokeh.bokeh_px_returns_plot(data=df,
                                                          title=[co_nm + ' Px Returns'],
-                                                         subtitle=["Exchange Ticker: " + ticker])
+                                                         subtitle=["Exchange Ticker: " + ticker],
+                                                         type_list=px_ret_type_list,
+                                                         scatter=False)
+        px_rets_scatter_plot = ExtendBokeh.bokeh_px_returns_plot(data=df,
+                                                                 title=[co_nm + ' Px Returns'],
+                                                                 subtitle=['Exchange Ticker: ' + ticker],
+                                                                 type_list=px_ret_type_list,
+                                                                 scatter=True)
         hist_plots.append(px_line_plot)
-        hist_plots.append(px_rets_plot)
+        hist_plots.append(px_rets_line_plot)
+        hist_plots.append(px_rets_scatter_plot)
         px_rets_normal_ovl, px_rets_normal_cdf = \
             ExtendBokeh.bokeh_histogram_overlay_normal(px_rets)
         px_rets_lognormal_ovl, px_rets_lognormal_cdf = \

@@ -3,6 +3,7 @@ from bokeh.io import output_file, show
 from bokeh.layouts import row, column, gridplot
 from bokeh.models.widgets import Panel, Tabs
 from bokeh.models import HoverTool, Title, BoxAnnotation, Span
+from bokeh.models import CategoricalColorMapper, Band
 import numpy as np
 import pandas as pd
 import scipy as sp
@@ -348,29 +349,58 @@ class ExtendBokeh(object):
     @staticmethod
     def bokeh_px_line_plot(data,
                            title=['Px Chart'],
-                           subtitle=['']):
+                           subtitle=[''],
+                           type_list=['adjClose'],
+                           color_list=['navy', 'green', 'blue', 'limegreen', 'black', 'magenta']):
 
         x_axis = pd.to_datetime(data.index)
         p = figure(plot_width=600, plot_height=400, x_axis_type ="datetime")
         p.add_layout(Title(text=subtitle[0], text_font_style="italic"), place='above')
         p.add_layout(Title(text=title[0], text_font_size="14pt"), place='above')
-        p.line(x_axis, data, color="navy", alpha=0.5)
-
+        px_type_color_dict = dict(zip(color_list[0:len(type_list)], type_list))
+        for color, px_type in px_type_color_dict.items():
+            p.line(x_axis, data[px_type], color=color, alpha=0.5)
         return p
 
     @staticmethod
     def bokeh_px_returns_plot(data,
                               title=['Px Returns Chart'],
-                              subtitle=['']):
+                              subtitle=[''],
+                              type_list=None,
+                              color_list=['navy', 'green', 'blue', 'limegreen', 'black', 'magenta'],
+                              band_width=3.0,
+                              scatter=False,
+                              rolling_window_size=90): # options are 30, 60, 90, 120, 180, 270
 
         x_axis = pd.to_datetime(data.index)
-        ecdf_obj = ECDF(data=data, percentiles=[0.3, 5.0, 32.0, 68.0, 95.0, 99.7])
-        mu = ecdf_obj.get_mu()
-        sigma = ecdf_obj.get_sigma()
         p = figure(plot_width=600, plot_height=400, x_axis_type='datetime')
         p.add_layout(Title(text=subtitle[0], text_font_style="italic"), place='above')
         p.add_layout(Title(text=title[0], text_font_size="14pt"), place='above')
-        p.line(x_axis, data, color='navy', alpha=0.5)
+        px_type_color_dict = dict(zip(color_list[0:len(type_list)], type_list))
+        data['row_cnt'] = data.reset_index().index.values
+
+        rolling_stat_list = list(filter(lambda col_nm: (str(rolling_window_size) + 'D' in col_nm) is True,
+                                        data.columns.values))
+        rolling_mean_stat = list(filter(lambda col_nm: ('mean' in col_nm) is True, rolling_stat_list))[0]
+        rolling_std_stat = list(filter(lambda col_nm: ('std' in col_nm) is True, rolling_stat_list))[0]
+        rolling_skew_stat = list(filter(lambda col_nm: ('skew' in col_nm) is True, rolling_stat_list))[0]
+        rolling_kurt_stat = list(filter(lambda col_nm: ('kurtosis' in col_nm) is True, rolling_stat_list))[0]
+        rolling_sem_stat = list(filter(lambda col_nm: ('sem' in col_nm) is True, rolling_stat_list))[0]
+
+        data['lower'] = data[rolling_mean_stat] - data[rolling_std_stat]*band_width
+        data['upper'] = data[rolling_mean_stat] + data[rolling_std_stat]*band_width
+        source = ColumnDataSource(data)
+        for color, px_ret_type in px_type_color_dict.items():
+            ecdf_obj = ECDF(data=data[px_ret_type], percentiles=[0.3, 5.0, 32.0, 68.0, 95.0, 99.7])
+            mu = ecdf_obj.get_mu()
+            sigma = ecdf_obj.get_sigma()
+            if (not scatter):
+                p.line(x_axis, data[px_ret_type], color=color, alpha=0.5)
+            else:
+                p.scatter(x='date', y=px_ret_type, line_color=None, fill_alpha=0.3, size=5, source=source)
+            band = Band(base='date', lower='lower', upper='upper', level='underlay',
+                        fill_alpha=1.0, line_width=1, line_color='black', source=source)
+            p.add_layout(band)
 
         minus_three_sigma_box = BoxAnnotation(bottom=mu-3*sigma, top=mu-2*sigma, fill_alpha=0.1,
                                               fill_color='red')
