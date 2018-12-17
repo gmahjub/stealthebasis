@@ -120,13 +120,11 @@ class TrackStatMomProj:
         self.logger.info('TrackStatMomProj.vectorized_symbols_func(): pulling daily px returns for %s', ticker)
         sm = StatisticalMoments()
         px = sm.get_pricing(ticker=ticker, fields=['adjClose'])
-
         px_rets = sm.get_stock_returns(ticker=ticker)
         px_rets.rename(px_rets.name + '_px_rets', inplace=True)
-
         sem = lambda px_ret: px_ret.std() / np.sqrt(len(px_ret))
-
         all_df_to_concat = [px, px_rets]
+        line_plot_band_breach_list = []
         for window_size in self.daily_window_sizes:
             rolling_df = px_rets.rolling(window=window_size).agg({"mean_ret": np.mean,
                                                                   "std_ret": np.std,
@@ -142,9 +140,18 @@ class TrackStatMomProj:
         p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf = TrackStatMomProj.outlier_analysis(px_rets)
         px_log_rets = np.log(1+px_rets)
         hist_plots = []
+
+        spans_tuples_list = ExtendBokeh.bokeh_create_mean_var_spans(df,
+                                                                    rolling_window_size=180,
+                                                                    var_bandwidth=3.0,
+                                                                    color = ('red','green'))
         px_line_plot = ExtendBokeh.bokeh_px_line_plot(data=df,#data=px.squeeze(),
                                                       title=[co_nm + ' Px Chart'],
                                                       subtitle=["Exchange Ticker: " + ticker])
+        px_line_plot_band_breach_spans = ExtendBokeh.bokeh_px_line_plot(data=df,
+                                                                        title=[co_nm + ' Px Chart Band Breaches'],
+                                                                        subtitle=["Exchange Ticker: " + ticker],
+                                                                        spans_list=spans_tuples_list)
         px_rets_line_plot = ExtendBokeh.bokeh_px_returns_plot(data=df,
                                                          title=[co_nm + ' Px Returns'],
                                                          subtitle=["Exchange Ticker: " + ticker],
@@ -155,9 +162,12 @@ class TrackStatMomProj:
                                                                  subtitle=['Exchange Ticker: ' + ticker],
                                                                  type_list=px_ret_type_list,
                                                                  scatter=True)
+
         hist_plots.append(px_line_plot)
         hist_plots.append(px_rets_line_plot)
         hist_plots.append(px_rets_scatter_plot)
+        hist_plots.append(px_line_plot_band_breach_spans)
+        hist_plots = hist_plots + line_plot_band_breach_list
         px_rets_normal_ovl, px_rets_normal_cdf = \
             ExtendBokeh.bokeh_histogram_overlay_normal(px_rets)
         px_rets_lognormal_ovl, px_rets_lognormal_cdf = \

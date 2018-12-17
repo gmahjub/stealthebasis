@@ -49,7 +49,7 @@ class TiingoDataObject(DataObject):
         self.local_file_type = '.csv'
         self.local_data_file_pwd = OSMuxImpl.get_proper_path(self.local_tiingo_data_path)
 
-        return super().__init__(**kwargs)
+        #return super().__init__(**kwargs)
 
     def get_all_px_single(self,
                           sym,

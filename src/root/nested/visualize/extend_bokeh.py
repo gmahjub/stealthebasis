@@ -22,7 +22,7 @@ class ExtendBokeh(object):
 
     def __init__(self, **kwargs):
 
-        self.logger = get_logger()
+        #self.logger = get_logger()
         return super().__init__(**kwargs)
 
     def bokeh_scatter(self,
@@ -90,7 +90,7 @@ class ExtendBokeh(object):
 
         p = figure(x_axis_label = x_label, y_axis_label = y_label)
         if len(x_data_list) != len(y_data_list):
-            self.logger.error("data lists cannot be different sizes!")
+            LOGGER.error("data lists cannot be different sizes!")
         else:
             data_list_len = len(x_data_list)
             i = 0
@@ -193,7 +193,7 @@ class ExtendBokeh(object):
         len_x_data_col_list = len(x_data_col_list)
         len_y_data_col_list = len(y_data_col_list)
         if len_x_data_col_list != len_y_data_col_list:
-            self.logger.error("list of x_data must be equal in length to y_data!")
+            LOGGER.error("list of x_data must be equal in length to y_data!")
         else:
             i = 0
             figure_list = []
@@ -347,11 +347,32 @@ class ExtendBokeh(object):
         return p_weibull
 
     @staticmethod
+    def bokeh_create_mean_var_spans(data,
+                                    rolling_window_size=90,
+                                    var_bandwidth=3.0,
+                                    color = ('red','green')):
+
+        data['row_cnt'] = data.reset_index().index.values
+        rolling_stat_list = list(filter(lambda col_nm: (str(rolling_window_size) + 'D' in col_nm) is True,
+                                        data.columns.values))
+        rolling_mean_stat = list(filter(lambda col_nm: ('mean' in col_nm) is True, rolling_stat_list))[0]
+        rolling_std_stat = list(filter(lambda col_nm: ('std' in col_nm) is True, rolling_stat_list))[0]
+        data['lower'] = data[rolling_mean_stat] - data[rolling_std_stat]*var_bandwidth
+        data['upper'] = data[rolling_mean_stat] + data[rolling_std_stat]*var_bandwidth
+        px_ret_type_list = list(filter(lambda col_nm: ('_px_rets' in col_nm) is True, data.columns.values))
+        lower_breach = data[data.lower > data[px_ret_type_list[0]]]
+        upper_breach = data[data.upper < data[px_ret_type_list[0]]]
+        return_tuples_list = [(color[0], lower_breach), (color[1], upper_breach)]
+        
+        return return_tuples_list
+
+    @staticmethod
     def bokeh_px_line_plot(data,
                            title=['Px Chart'],
                            subtitle=[''],
                            type_list=['adjClose'],
-                           color_list=['navy', 'green', 'blue', 'limegreen', 'black', 'magenta']):
+                           color_list=['navy', 'green', 'blue', 'limegreen', 'black', 'magenta'],
+                           spans_list = None):
 
         x_axis = pd.to_datetime(data.index)
         p = figure(plot_width=600, plot_height=400, x_axis_type ="datetime")
@@ -360,6 +381,15 @@ class ExtendBokeh(object):
         px_type_color_dict = dict(zip(color_list[0:len(type_list)], type_list))
         for color, px_type in px_type_color_dict.items():
             p.line(x_axis, data[px_type], color=color, alpha=0.5)
+        if spans_list is not None:
+            for span_tuple in spans_list:
+                span_obj_series = span_tuple[1].apply(lambda x: Span(location=x.name,
+                                                                     dimension='height',
+                                                                     line_color=span_tuple[0],
+                                                                     line_dash='dashed',
+                                                                     line_width=1), 
+                                                      1)
+                span_obj_series.apply(lambda x: p.add_layout(x), 1)
         return p
 
     @staticmethod
