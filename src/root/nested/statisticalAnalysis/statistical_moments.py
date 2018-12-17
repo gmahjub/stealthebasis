@@ -81,6 +81,7 @@ class StatisticalMoments(object):
 
     def get_stock_returns(self,
                           ticker,
+                          freq='D',
                           start_date='2010-01-01',
                           end_date=str(pd.to_datetime('today')).split(' ')[0],
                           px_type='adjClose'):
@@ -94,15 +95,45 @@ class StatisticalMoments(object):
         pricing_dict = mdo.get_px_data_df(start_date,
                                           end_date)
         pricing_df = pricing_dict[ticker]
+        if freq is not 'D':
+            pricing_df = self.down_sample_daily_price_data(pricing=pricing_df, to_freq=freq)
         pricing = pricing_df[px_type]
         returns = pricing.pct_change()[1:]
         return returns
+
+    def get_rolling_returns(self,
+                            ticker,
+                            freq='D',
+                            start_date='2010-01-01',
+                            end_date=str(pd.to_datetime('today')).split(' ')[0],
+                            px_type='adjClose',
+                            data=None,
+                            window_size=30):
+
+        if data is None:
+            symbols = [ticker]
+            source = 'Tiingo'
+            mdo = TiingoDataObject(start_date=start_date,
+                                   end_date=end_date,
+                                   source=source,
+                                   symbols=symbols)
+            pricing_dict = mdo.get_px_data_df(start_date,
+                                          end_date)
+            pricing_df = pricing_dict[ticker]
+        else:
+            pricing_df = data
+        if freq is not 'D':
+            pricing_df = self.down_sample_daily_price_data(pricing=pricing_df, to_freq=freq)
+        pricing = pricing_df[px_type]
+        rolling_returns = pricing.pct_change(periods = window_size)
+        return rolling_returns
 
     """ get_pricing: main function to retrieve daily price data
         The source of this data is currently Tiingo. 
     """
     def get_pricing(self,
                     ticker,
+                    freq='D', # options are 'D', 'W', 'M'
                     start_date='2010-01-01',
                     end_date=str(pd.to_datetime('today')).split(' ')[0],
                     fields=['adjOpen', 'adjHigh', 'adjLow', 'adjClose']):
@@ -116,18 +147,36 @@ class StatisticalMoments(object):
         pricing_dict = mdo.get_px_data_df(start_date,
                                           end_date)
         pricing_df = pricing_dict[ticker]
+        if freq is not 'D':
+            pricing_df=self.down_sample_daily_price_data(pricing=pricing_df, to_freq=freq)
         pricing = pricing_df[fields]
         return pricing
+
+    def down_sample_daily_price_data(self,
+                                     pricing,
+                                     to_freq='W'):
+
+        output = pricing.resample(to_freq,  # Weekly resample
+                                  how={'adjOpen': take_first,
+                                       'adjHigh': 'max',
+                                       'adjLow': 'min',
+                                       'adjClose': take_last,
+                                       'adjVolume': 'sum'})
+        return output
 
     """ Calculate the kurtosis of the returns for the specificed ticker, with specificed
         start and end dates. 
     """
     def calc_stock_return_kurtosis(self,
                                    ticker,
+                                   data = None,
                                    start_date = '2010-01-01',
                                    end_date = str(pd.to_datetime('today')).split(' ')[0]):
 
-        returns = self.get_stock_returns(ticker, start_date, end_date)
+        if data is None:
+            returns = self.get_stock_returns(ticker, start_date, end_date)
+        else:
+            returns = data
         kurt = stats.kurtosis(returns)
         if kurt < 0:
             print ("Excess Kurtosis is ", kurt, ".Because the excess kurtosis is negative, "
@@ -144,29 +193,57 @@ class StatisticalMoments(object):
     """
     def calc_stock_return_skew(self,
                                ticker,
+                               data = None,
                                start_date='2010-01-01', # 2010-01-01 to present is max data offered by Tiingo
                                end_date=str(pd.to_datetime('today')).split(' ')[0], # str, e.g. "2011-01-01"
                                px_type = 'adjClose'):
 
-        returns = self.get_stock_returns(ticker, start_date, end_date, px_type=px_type)
+        if data is None:
+            returns = self.get_stock_returns(ticker, start_date, end_date, px_type=px_type)
+        else:
+            returns = data
         skew = stats.skew(returns)
         print ('Skew: ', skew)
         return skew
       
-    """ Calculate a rolling skey, with window size "window_size", for the specified
+    """ Calculate a rolling skew, with window size "window_size", for the specified
         ticker with specified start and end dates.
     """
     def rolling_skew_of_returns(self,
                                 ticker,
                                 start_date,
                                 end_date,
-                                window_size):
+                                window_size,
+                                data = None):
 
-        returns = self.get_stock_returns(ticker, start_date, end_date)
+        if data is None:
+            returns = self.get_stock_returns(ticker, start_date, end_date)
+        else:
+            returns = data
         roll_func = returns.rolling(window = window_size, center = False).skew()
         plt.plot(roll_func)
         plt.xlabel('Time')
         plt.ylabel(str(window_size) + " Period Rolling Skew")
+        plt.show()
+
+    """ Calculate a rolling kurtosis, with window size "window_size, for the specified
+        ticker with specificed start and end dates.
+    """
+    def rolling_kurt_of_returns(self,
+                                ticker,
+                                start_date,
+                                end_date,
+                                window_size,
+                                data = None):
+
+        if data is None:
+            returns = self.get_stock_returns(ticker, start_date, end_date)
+        else:
+            returns = data
+        roll_func = returns.rolling(window = window_size, center = False).kurtosis()
+        plt.plot(roll_func)
+        plt.xlabel('Time')
+        plt.ylabel(str(window_size) + " Period Rolling Kurtosis")
         plt.show()
 
     @staticmethod
@@ -316,3 +393,8 @@ if __name__ == '__main__':
                                start_date='2015-01-01',
                                end_date='2017-01-01',
                                window_size=60)
+def take_first(px_series):
+    return px_series[0]
+
+def take_last(px_series):
+    return px_series[-1]

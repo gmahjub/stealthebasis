@@ -1,5 +1,5 @@
 from bokeh.plotting import figure, ColumnDataSource
-from bokeh.io import output_file, show
+from bokeh.io import output_file, show, save
 from bokeh.layouts import row, column, gridplot
 from bokeh.models.widgets import Panel, Tabs
 from bokeh.models import HoverTool, Title, BoxAnnotation, Span
@@ -348,13 +348,16 @@ class ExtendBokeh(object):
 
     @staticmethod
     def bokeh_create_mean_var_spans(data,
+                                    freq = 'D',
                                     rolling_window_size=90,
                                     var_bandwidth=3.0,
                                     color = ('red','green')):
 
         data['row_cnt'] = data.reset_index().index.values
-        rolling_stat_list = list(filter(lambda col_nm: (str(rolling_window_size) + 'D' in col_nm) is True,
+        print (data.columns.values)
+        rolling_stat_list = list(filter(lambda col_nm: (str(rolling_window_size) + freq in col_nm) is True,
                                         data.columns.values))
+        print (rolling_stat_list)
         rolling_mean_stat = list(filter(lambda col_nm: ('mean' in col_nm) is True, rolling_stat_list))[0]
         rolling_std_stat = list(filter(lambda col_nm: ('std' in col_nm) is True, rolling_stat_list))[0]
         data['lower'] = data[rolling_mean_stat] - data[rolling_std_stat]*var_bandwidth
@@ -394,6 +397,7 @@ class ExtendBokeh(object):
 
     @staticmethod
     def bokeh_px_returns_plot(data,
+                              freq='D',
                               title=['Px Returns Chart'],
                               subtitle=[''],
                               type_list=None,
@@ -409,7 +413,7 @@ class ExtendBokeh(object):
         px_type_color_dict = dict(zip(color_list[0:len(type_list)], type_list))
         data['row_cnt'] = data.reset_index().index.values
 
-        rolling_stat_list = list(filter(lambda col_nm: (str(rolling_window_size) + 'D' in col_nm) is True,
+        rolling_stat_list = list(filter(lambda col_nm: (str(rolling_window_size) + freq in col_nm) is True,
                                         data.columns.values))
         rolling_mean_stat = list(filter(lambda col_nm: ('mean' in col_nm) is True, rolling_stat_list))[0]
         rolling_std_stat = list(filter(lambda col_nm: ('std' in col_nm) is True, rolling_stat_list))[0]
@@ -425,6 +429,8 @@ class ExtendBokeh(object):
             mu = ecdf_obj.get_mu()
             sigma = ecdf_obj.get_sigma()
             if (not scatter):
+                ExtendBokeh.LOGGER.info("ExtendBokeh.bokeh_px_returns_plot(): plotting %s in line color %s",
+                                        px_ret_type, color)
                 p.line(x_axis, data[px_ret_type], color=color, alpha=0.5)
             else:
                 p.scatter(x='date', y=px_ret_type, line_color=None, fill_alpha=0.3, size=5, source=source)
@@ -458,8 +464,19 @@ class ExtendBokeh(object):
                         html_output_file_title):
 
         output_file(html_output_file, title=html_output_file_title)
-        gp = gridplot(grid_plots_list, ncols=2, plot_width=600, plot_height=600, toolbar_location=None)
+        gp = gridplot(grid_plots_list, ncols=2, plot_width=600, plot_height=600, toolbar_location='right')
         show(gp)
+
+    @staticmethod
+    def save_html(grid_plots_list,
+                  html_output_file,
+                  html_output_file_title):
+
+        output_file(html_output_file, title=html_output_file_title)
+        gp = gridplot(grid_plots_list, ncols=2, plot_width=600, plot_height=600, toolbar_location='right')
+        # toolbar_location options are 'above', 'right', 'left', 'below'
+        save(gp)
+
 
 
 def make_histogram_plot(title,
