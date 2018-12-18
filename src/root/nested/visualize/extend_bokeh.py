@@ -396,6 +396,66 @@ class ExtendBokeh(object):
         return p
 
     @staticmethod
+    def bokeh_rolling_pxret_skew(data,
+                                 freq='D',
+                                 title=["Rolling Returns vs. Rolling Skew"],
+                                 subtitle=[''],
+                                 type_list=None,
+                                 color_list=['blue', 'magenta'],
+                                 band_width=3.0,
+                                 scatter=True,
+                                 rolling_window_size=90):
+
+        data["x_coord"] = pd.to_datetime(data.index)
+        p_line = figure(plot_width=600, plot_height=400, x_axis_type='datetime')
+        p_scat = figure(plot_width=600, plot_height=400)
+        p_line.add_layout(Title(text=subtitle[0], text_font_style="italic"), place='above')
+        p_line.add_layout(Title(text=title[0], text_font_size="14pt"), place='above')
+        p_scat.add_layout(Title(text=subtitle[0], text_font_style="italic"), place='above')
+        p_scat.add_layout(Title(text=title[0], text_font_size="14pt"), place='above')
+        
+        px_type_color_dict = dict(zip(color_list[0:len(type_list)], type_list))
+        data['row_cnt'] = data.reset_index().index.values
+
+        rolling_stat_list = list(filter(lambda col_nm: (str(rolling_window_size) + freq in col_nm) is True,
+                                        data.columns.values))
+        rolling_mean_stat = list(filter(lambda col_nm: ('mean' in col_nm) is True, rolling_stat_list))[0]
+        rolling_std_stat = list(filter(lambda col_nm: ('std' in col_nm) is True, rolling_stat_list))[0]
+        rolling_skew_stat = list(filter(lambda col_nm: ('skew' in col_nm) is True, rolling_stat_list))[0]
+        rolling_kurt_stat = list(filter(lambda col_nm: ('kurtosis' in col_nm) is True, rolling_stat_list))[0]
+        rolling_sem_stat = list(filter(lambda col_nm: ('sem' in col_nm) is True, rolling_stat_list))[0]
+
+        source = ColumnDataSource(data)
+        for color, px_ret_type in px_type_color_dict.items():
+            ecdf_obj = ECDF(data=data[px_ret_type], percentiles=[0.3, 5.0, 32.0, 68.0, 95.0, 99.7])
+            mu = ecdf_obj.get_mu()
+            sigma = ecdf_obj.get_sigma()
+            ExtendBokeh.LOGGER.info("ExtendBokeh.bokeh_px_returns_plot(): plotting %s in line color %s", 
+                                    px_ret_type, color)
+            p_line.line(x="x_coord", y=px_ret_type, color=color, alpha=0.5, source=source)
+        if scatter is True:
+            p_scat.scatter(x=type_list[1], y=type_list[0], line_color=None, size=5, source=source)
+            # regression line
+
+            print ("type_list_0", data[type_list[0]][rolling_window_size:].head(10))
+            print ("type_list_1", data[type_list[1]][rolling_window_size:].head(10))
+
+            regression = np.polyfit(data[type_list[1]][rolling_window_size:], data[type_list[0]][rolling_window_size:], 1)
+            min_val = data[type_list[1]].min()
+            max_val = data[type_list[1]].max()
+            # r_x, r_y = zip(*((i, i*regression[0] + regression[1]) for i in range(min_val, max_val)))
+            r_x = np.linspace(start=min_val, stop=max_val, num=len(data))
+            r_y = r_x*regression[0] + regression[1]
+            
+            print ("xvals of regression", r_x)
+            print ("yvals of regression", r_y)
+
+            p_scat.line(x=r_x, y=r_y, color = 'red')
+            
+        return p_line, p_scat
+
+
+    @staticmethod
     def bokeh_px_returns_plot(data,
                               freq='D',
                               title=['Px Returns Chart'],

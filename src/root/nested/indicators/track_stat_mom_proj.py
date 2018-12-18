@@ -212,17 +212,20 @@ class TrackStatMomProj:
         # px_rets_gamma_ovl = ext_bokeh.bokeh_histogram_overlay_gammma(px_rets)
         # hist_plots.append(px_rets_gamma_ovl)
         # overlay rolling skew and rolling returns
-        p_roll_skew_vs_rets=ExtendBokeh.bokeh_px_returns_plot(df,
-                                                              freq=price_freq,
-                                                              title=['Rolling Returns vs. Rolling Skew'],
-                                                              subtitle=[str(win_price_freq) + price_freq + ' Window'],
-                                                              type_list=['adjClose_px_rets_rolling',
-                                                                          str(win_price_freq)+price_freq+'_skew_ret'],
-                                                              color_list=['navy', 'green', 'blue', 'limegreen', 'black',
-                                                                          'magenta'],
-                                                              band_width=3.0,
-                                                              scatter=False,
-                                                              rolling_window_size=win_price_freq)
+        p_rolling_pxret_skew_line, p_rolling_pxret_skew_scatter = \
+            ExtendBokeh.bokeh_rolling_pxret_skew(df,
+                                                 freq=price_freq,
+                                                 title=['Rolling Returns vs. Rolling Skew'],
+                                                 subtitle=[str(win_price_freq) + price_freq + ' Window'],
+                                                 type_list=['adjClose_px_rets_rolling', str(win_price_freq)+price_freq+'_skew_ret'],
+                                                 rolling_window_size=win_price_freq)
+        p_pxret_rolling_skew_line, p_pxret_rolling_skew_scatter = \
+            ExtendBokeh.bokeh_rolling_pxret_skew(df,
+                                                 freq=price_freq,
+                                                 title=['Returns vs. Rolling Skew'],
+                                                 subtitle=[str(win_price_freq) + price_freq + ' Window'],
+                                                 type_list=['adjClose_px_rets', str(win_price_freq) + price_freq + '_skew_ret'],
+                                                 rolling_window_size=win_price_freq)
 
         # next, lets do the KS Test, to test for normality. We will do JB Test later.
         ks_test_stat_raw_rets, p_value_raw_rets = StatsTests.ks_test(rvs = px_rets, dist_size=len(px_rets), cdf='norm')
@@ -249,12 +252,12 @@ class TrackStatMomProj:
 
         if (save_or_show is 'show'):
             ExtendBokeh.show_hist_plots(hist_plots, html_output_file, html_output_file_title)
-            ExtendBokeh.show_hist_plots([p_roll_skew_vs_rets],
+            ExtendBokeh.show_hist_plots([p_rolling_pxret_skew_line, p_rolling_pxret_skew_scatter, p_pxret_rolling_skew_line, p_pxret_rolling_skew_scatter],
                                         html_output_file_skew_analysis,
                                         html_output_file_title_skew_analysis)
         else:
             ExtendBokeh.save_html(hist_plots, html_output_file, html_output_file_title)
-            ExtendBokeh.save_html([p_roll_skew_vs_rets],
+            ExtendBokeh.save_html([p_rolling_pxret_skew_line, p_rolling_pxret_skew_scatter],
                                   html_output_file_skew_analysis,
                                   html_output_file_title_skew_analysis)
 
