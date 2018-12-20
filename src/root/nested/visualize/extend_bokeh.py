@@ -404,7 +404,8 @@ class ExtendBokeh(object):
                                  color_list=['blue', 'magenta'],
                                  band_width=3.0,
                                  scatter=True,
-                                 rolling_window_size=90):
+                                 rolling_window_size=90,
+                                 skew_filter=None):
 
         data["x_coord"] = pd.to_datetime(data.index)
         p_line = figure(plot_width=600, plot_height=400, x_axis_type='datetime')
@@ -434,11 +435,20 @@ class ExtendBokeh(object):
                                     px_ret_type, color)
             p_line.line(x="x_coord", y=px_ret_type, color=color, alpha=0.5, source=source)
         if scatter is True:
-            p_scat.scatter(x=type_list[1], y=type_list[0], line_color=None, size=5, source=source)
+            scatter_source=source
+            if skew_filter is not None:
+                filtered_data = data[data[type_list[1]] < skew_filter[0]]
+                filtered_data=pd.concat([filtered_data, data[data[type_list[1]] > skew_filter[1]]])
+                #print ("filtered_data", filtered_data)
+                scatter_source = ColumnDataSource(filtered_data)
+            #return
+            p_scat.scatter(x=type_list[1], y=type_list[0], line_color=None, size=5, source=scatter_source)
             # regression line
 
             print ("type_list_0", data[type_list[0]][rolling_window_size:].head(10))
             print ("type_list_1", data[type_list[1]][rolling_window_size:].head(10))
+
+
 
             regression = np.polyfit(data[type_list[1]][rolling_window_size:], data[type_list[0]][rolling_window_size:], 1)
             min_val = data[type_list[1]].min()

@@ -108,7 +108,8 @@ class StatisticalMoments(object):
                             end_date=str(pd.to_datetime('today')).split(' ')[0],
                             px_type='adjClose',
                             data=None,
-                            window_size=30):
+                            window_size=30,
+                            shift_rets_series=False):
 
         if data is None:
             symbols = [ticker]
@@ -126,6 +127,8 @@ class StatisticalMoments(object):
             pricing_df = self.down_sample_daily_price_data(pricing=pricing_df, to_freq=freq)
         pricing = pricing_df[px_type]
         rolling_returns = pricing.pct_change(periods = window_size)
+        if shift_rets_series is True:
+            rolling_returns = rolling_returns.shift(-1*window_size)
         return rolling_returns.squeeze()
 
     """ get_pricing: main function to retrieve daily price data

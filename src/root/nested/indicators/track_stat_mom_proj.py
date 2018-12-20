@@ -124,8 +124,10 @@ class TrackStatMomProj:
 
         # some parameters
         save_or_show = 'show'
-        price_freq = 'W'
-        win_price_freq = 36
+        price_freq = 'D'
+        win_price_freq = 180
+        return_period = 120
+        skew_filter=(-0.75, 0.75)
 
         window_sizes = self.window_size_dict[price_freq]
         ticker = row.name
@@ -137,7 +139,8 @@ class TrackStatMomProj:
                                                  freq=price_freq,
                                                  px_type='adjClose',
                                                  data = px,
-                                                 window_size = win_price_freq)
+                                                 window_size = return_period,
+                                                 shift_rets_series=True)
         # rolling_px_rets=rolling_px_rets.fillna(method='bfill')
         px_rets = px.pct_change()[1:].squeeze()
         #print (px_rets.head(), type(px_rets))
@@ -217,16 +220,20 @@ class TrackStatMomProj:
             ExtendBokeh.bokeh_rolling_pxret_skew(df,
                                                  freq=price_freq,
                                                  title=['Rolling Returns vs. Rolling Skew'],
-                                                 subtitle=[str(win_price_freq) + price_freq + ' Window'],
+                                                 subtitle=[str(return_period) + price_freq + '/' +
+                                                           str(win_price_freq) + price_freq + ' Window'],
                                                  type_list=['adjClose_px_rets_rolling', str(win_price_freq)+price_freq+'_skew_ret'],
-                                                 rolling_window_size=win_price_freq)
+                                                 rolling_window_size=win_price_freq,
+                                                 skew_filter=skew_filter)
         p_pxret_rolling_skew_line, p_pxret_rolling_skew_scatter = \
             ExtendBokeh.bokeh_rolling_pxret_skew(df,
                                                  freq=price_freq,
                                                  title=['Returns vs. Rolling Skew'],
-                                                 subtitle=[str(win_price_freq) + price_freq + ' Window'],
+                                                 subtitle=[str(1) + price_freq + '/' +
+                                                           str(win_price_freq) + price_freq + ' Window'],
                                                  type_list=['adjClose_px_rets', str(win_price_freq) + price_freq + '_skew_ret'],
-                                                 rolling_window_size=win_price_freq)
+                                                 rolling_window_size=win_price_freq,
+                                                 skew_filter=skew_filter)
 
         # next, lets do the KS Test, to test for normality. We will do JB Test later.
         ks_test_stat_raw_rets, p_value_raw_rets = StatsTests.ks_test(rvs = px_rets, dist_size=len(px_rets), cdf='norm')
