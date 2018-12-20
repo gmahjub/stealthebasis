@@ -126,7 +126,7 @@ class StatisticalMoments(object):
             pricing_df = self.down_sample_daily_price_data(pricing=pricing_df, to_freq=freq)
         pricing = pricing_df[px_type]
         rolling_returns = pricing.pct_change(periods = window_size)
-        return rolling_returns
+        return rolling_returns.squeeze()
 
     """ get_pricing: main function to retrieve daily price data
         The source of this data is currently Tiingo. 

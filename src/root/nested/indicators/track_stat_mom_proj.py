@@ -124,8 +124,8 @@ class TrackStatMomProj:
 
         # some parameters
         save_or_show = 'show'
-        price_freq = 'D'
-        win_price_freq = 60
+        price_freq = 'W'
+        win_price_freq = 36
 
         window_sizes = self.window_size_dict[price_freq]
         ticker = row.name
@@ -144,6 +144,7 @@ class TrackStatMomProj:
         #px_rets = sm.get_stock_returns(ticker=ticker, freq=price_freq)
         #print (px_rets.head())
         px_rets.rename(px_rets.name + '_px_rets', inplace=True)
+        print (type(rolling_px_rets))
         rolling_px_rets.rename(px_rets.name + '_rolling', inplace = True)
         sem = lambda px_ret: px_ret.std() / np.sqrt(len(px_ret))
         all_df_to_concat = [px, px_rets, rolling_px_rets]
