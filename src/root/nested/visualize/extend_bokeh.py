@@ -2,15 +2,15 @@ from bokeh.plotting import figure, ColumnDataSource
 from bokeh.io import output_file, show, save
 from bokeh.layouts import row, column, gridplot
 from bokeh.models.widgets import Panel, Tabs
-from bokeh.models import HoverTool, Title, BoxAnnotation, Span
+from bokeh.models import HoverTool, Title, BoxAnnotation, Span, Range1d
 from bokeh.models import CategoricalColorMapper, Band
+from bokeh.models.axes import LinearAxis
 import numpy as np
 import pandas as pd
 import scipy as sp
 from scipy import stats
 
 from root.nested.statisticalAnalysis.hacker_stats import HackerStats
-from root.nested.statisticalAnalysis.statistical_moments import StatisticalMoments
 from root.nested.statisticalAnalysis.ecdf import ECDF
 from root.nested import get_logger
 
@@ -90,7 +90,7 @@ class ExtendBokeh(object):
 
         p = figure(x_axis_label = x_label, y_axis_label = y_label)
         if len(x_data_list) != len(y_data_list):
-            LOGGER.error("data lists cannot be different sizes!")
+            ExtendBokeh.LOGGER.error("data lists cannot be different sizes!")
         else:
             data_list_len = len(x_data_list)
             i = 0
@@ -348,21 +348,24 @@ class ExtendBokeh(object):
 
     @staticmethod
     def bokeh_create_mean_var_spans(data,
+                                    ticker,
+                                    benchmark_ticker=None,
                                     freq = 'D',
                                     rolling_window_size=90,
                                     var_bandwidth=3.0,
                                     color = ('red','green')):
 
         data['row_cnt'] = data.reset_index().index.values
-        print (data.columns.values)
         rolling_stat_list = list(filter(lambda col_nm: (str(rolling_window_size) + freq in col_nm) is True,
                                         data.columns.values))
-        print (rolling_stat_list)
         rolling_mean_stat = list(filter(lambda col_nm: ('mean' in col_nm) is True, rolling_stat_list))[0]
         rolling_std_stat = list(filter(lambda col_nm: ('std' in col_nm) is True, rolling_stat_list))[0]
         data['lower'] = data[rolling_mean_stat] - data[rolling_std_stat]*var_bandwidth
         data['upper'] = data[rolling_mean_stat] + data[rolling_std_stat]*var_bandwidth
-        px_ret_type_list = list(filter(lambda col_nm: ('_px_rets' in col_nm) is True, data.columns.values))
+        if benchmark_ticker is not None:
+            px_ret_type_list = list(filter(lambda col_nm: ('_excess_rets' in col_nm) is True, data.columns.values))
+        else:
+            px_ret_type_list = list(filter(lambda col_nm: ('_px_rets' in col_nm) is True, data.columns.values))
         lower_breach = data[data.lower > data[px_ret_type_list[0]]]
         upper_breach = data[data.upper < data[px_ret_type_list[0]]]
         return_tuples_list = [(color[0], lower_breach), (color[1], upper_breach)]
@@ -371,27 +374,40 @@ class ExtendBokeh(object):
 
     @staticmethod
     def bokeh_px_line_plot(data,
+                           ticker,
+                           benchmark_px_series=None,
+                           benchmark_ticker=None,
                            title=['Px Chart'],
                            subtitle=[''],
                            type_list=['adjClose'],
                            color_list=['navy', 'green', 'blue', 'limegreen', 'black', 'magenta'],
-                           spans_list = None):
+                           spans_list = None,
+                           which_axis_list=None):
 
         x_axis = pd.to_datetime(data.index)
         p = figure(plot_width=600, plot_height=400, x_axis_type ="datetime")
         p.add_layout(Title(text=subtitle[0], text_font_style="italic"), place='above')
         p.add_layout(Title(text=title[0], text_font_size="14pt"), place='above')
-        px_type_color_dict = dict(zip(color_list[0:len(type_list)], type_list))
-        for color, px_type in px_type_color_dict.items():
-            p.line(x_axis, data[px_type], color=color, alpha=0.5)
+        num_lines_to_plot = len(type_list)
+        if which_axis_list is None:
+            which_axis_list = [0 for x in range(num_lines_to_plot)]
+        px_type_color_axis_list = list(zip(color_list[0:len(type_list)], type_list, which_axis_list))
+        for color, px_type, which_axis in px_type_color_axis_list:
+            if which_axis is 0:
+                p.y_range = Range1d(start=data[px_type].min(), end=data[px_type].max())
+                p.line(x_axis, data[px_type], color=color, alpha=0.5)
+            else:
+                p.extra_y_ranges = {benchmark_ticker + '_Px': Range1d(start=benchmark_px_series.min().values[0],
+                                                                      end=benchmark_px_series.max().values[0])}
+                p.add_layout(LinearAxis(y_range_name=benchmark_ticker + '_Px'), 'right')
+                p.line(x_axis, benchmark_px_series.squeeze(), color='black', y_range_name=benchmark_ticker + '_Px' )
         if spans_list is not None:
             for span_tuple in spans_list:
                 span_obj_series = span_tuple[1].apply(lambda x: Span(location=x.name,
                                                                      dimension='height',
                                                                      line_color=span_tuple[0],
                                                                      line_dash='dashed',
-                                                                     line_width=1), 
-                                                      1)
+                                                                     line_width=1), 1)
                 span_obj_series.apply(lambda x: p.add_layout(x), 1)
         return p
 
@@ -439,27 +455,15 @@ class ExtendBokeh(object):
             if skew_filter is not None:
                 filtered_data = data[data[type_list[1]] < skew_filter[0]]
                 filtered_data=pd.concat([filtered_data, data[data[type_list[1]] > skew_filter[1]]])
-                #print ("filtered_data", filtered_data)
                 scatter_source = ColumnDataSource(filtered_data)
-            #return
             p_scat.scatter(x=type_list[1], y=type_list[0], line_color=None, size=5, source=scatter_source)
             # regression line
-
-            print ("type_list_0", data[type_list[0]][rolling_window_size:].head(10))
-            print ("type_list_1", data[type_list[1]][rolling_window_size:].head(10))
-
-
-
             regression = np.polyfit(data[type_list[1]][rolling_window_size:], data[type_list[0]][rolling_window_size:], 1)
             min_val = data[type_list[1]].min()
             max_val = data[type_list[1]].max()
             # r_x, r_y = zip(*((i, i*regression[0] + regression[1]) for i in range(min_val, max_val)))
             r_x = np.linspace(start=min_val, stop=max_val, num=len(data))
             r_y = r_x*regression[0] + regression[1]
-            
-            print ("xvals of regression", r_x)
-            print ("yvals of regression", r_y)
-
             p_scat.line(x=r_x, y=r_y, color = 'red')
             
         return p_line, p_scat

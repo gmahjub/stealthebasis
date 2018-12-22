@@ -3,8 +3,7 @@ Created on Jan 17, 2018
 
 @author: ghazy
 '''
-from logging import getLogger
-import pandas as pd
+from root.nested import get_logger
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -12,7 +11,7 @@ class PerformanceAnalyzer(object):
     
     def __init__(self):
         
-        self.logger = getLogger()
+        self.logger = get_logger()
         
     def plot_excess_returns(self,
                             stock_data,
@@ -22,6 +21,13 @@ class PerformanceAnalyzer(object):
         excess_returns = stock_data.pct_change().sub(benchmark_data.pct_change(), axis=0)
         excess_returns.plot(title=title)
         plt.show()
+
+    def get_excess_returns(self,
+                           stock_data,
+                           benchmark_data):
+
+        excess_returns = stock_data.pct_change().sub(benchmark_data.pct_change(), axis=0)
+        return excess_returns
         
     def plot_average_excess_returns(self,
                                     stock_data,

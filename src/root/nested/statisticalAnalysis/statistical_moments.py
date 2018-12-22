@@ -11,6 +11,7 @@ class StatisticalMoments(object):
     """description of class"""
 
     LOGGER = get_logger()
+    MAX_TICKER_PULL_SIZE = 3
 
     def __init__(self, **kwargs):
         return super().__init__(**kwargs)
@@ -101,6 +102,58 @@ class StatisticalMoments(object):
         returns = pricing.pct_change()[1:]
         return returns
 
+    def get_stock_excess_return(self,
+                                stock_ticker,
+                                benchmark_ticker,
+                                start_date='2010-01-01',
+                                end_date=str(pd.to_datetime('today')).split(' ')[0],
+                                px_type='adjClose'):
+
+        symbols = [stock_ticker, benchmark_ticker]
+        source='Tiingo'
+        mdo = TiingoDataObject(start_date = start_date,
+                               end_date = end_date,
+                               source = source,
+                               symbols = symbols)
+        pricing_dict = mdo.get_px_data_df(start_date=start_date,
+                                          end_date=end_date)
+        stock_pricing_df = pricing_dict[stock_ticker]
+        benchmark_pricing_df = pricing_dict[benchmark_ticker]
+
+        print (type(stock_pricing_df), type(benchmark_pricing_df))
+        print (stock_pricing_df.head(10))
+        print (benchmark_pricing_df.head(10))
+
+    def get_rolling_excess_returns(self,
+                                   ticker,
+                                   benchmark,
+                                   freq='D',
+                                   start_date='2010-01-01',
+                                   end_date=str(pd.to_datetime('today')).split(' ')[0],
+                                   px_type='adjClose',
+                                   ticker_data=None,
+                                   benchmark_data=None,
+                                   window_size=30,
+                                   shift_rets_series=False):
+
+        ticker_roll_rets = self.get_rolling_returns(ticker=ticker,
+                                                    freq=freq,
+                                                    start_date=start_date,
+                                                    end_date=end_date,
+                                                    px_type=px_type,
+                                                    data=ticker_data,
+                                                    window_size=window_size,
+                                                    shift_rets_series=shift_rets_series)
+        benchmark_roll_rets = self.get_rolling_returns(ticker=benchmark,
+                                                       freq=freq,
+                                                       start_date=start_date,
+                                                       end_date=end_date,
+                                                       px_type=px_type,
+                                                       data=benchmark_data,
+                                                       window_size=window_size,
+                                                       shift_rets_series=shift_rets_series)
+        return (ticker_roll_rets - benchmark_roll_rets)
+
     def get_rolling_returns(self,
                             ticker,
                             freq='D',
@@ -141,7 +194,18 @@ class StatisticalMoments(object):
                     end_date=str(pd.to_datetime('today')).split(' ')[0],
                     fields=['adjOpen', 'adjHigh', 'adjLow', 'adjClose']):
 
-        symbols = [ticker]
+        if (type(ticker) is not list):
+            symbols = [ticker]
+        else:
+            symbols = ticker
+        if len(symbols) > 3:
+            StatisticalMoments.LOGGER.error("max number of ticker pulls allowed at once is 3, "
+                                            "%s given!", str(len(symbols)))
+            raise ValueError("max number of ticker to pull at once is " + \
+                             str(StatisticalMoments.MAX_TICKER_PULL_SIZE) + \
+                             ", input list is length " + str(len(symbols)) + "!!")
+            return
+
         source = 'Tiingo'
         mdo = TiingoDataObject(start_date=start_date,
                                end_date=end_date,
@@ -149,11 +213,14 @@ class StatisticalMoments(object):
                                symbols=symbols)
         pricing_dict = mdo.get_px_data_df(start_date,
                                           end_date)
-        pricing_df = pricing_dict[ticker]
-        if freq is not 'D':
-            pricing_df=self.down_sample_daily_price_data(pricing=pricing_df, to_freq=freq)
-        pricing = pricing_df[fields]
-        return pricing
+        return_dict = {}
+        for ticker in symbols:
+            pricing_df = pricing_dict[ticker]
+            if freq is not 'D':
+                pricing_df=self.down_sample_daily_price_data(pricing=pricing_df, to_freq=freq)
+            pricing = pricing_df[fields]
+            return_dict[ticker] = pricing
+        return return_dict
 
     def down_sample_daily_price_data(self,
                                      pricing,
