@@ -160,7 +160,7 @@ class StatisticalMoments(object):
                                                        data=benchmark_data,
                                                        window_size=window_size,
                                                        shift_rets_series=shift_rets_series)
-        return (ticker_roll_rets - benchmark_roll_rets)
+        return (ticker_roll_rets - benchmark_roll_rets).dropna()
 
     def get_rolling_returns(self,
                             ticker,
@@ -366,6 +366,7 @@ class StatisticalMoments(object):
         outliers_removed = px_returns_series[~(px_returns_series.isin(outliers))]
         StatisticalMoments.LOGGER.info('StatisticalMoments.remove_outliers_from_non_normal_dist(): '
                                        'Non-outlier observations (Series): %d' % len(outliers_removed))
+        print ("outliers removed", outliers_removed)
         return outliers_removed
 
     @staticmethod

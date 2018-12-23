@@ -103,7 +103,7 @@ class TrackStatMomProj:
                   symbol_universe_df):
 
         ### for testing, just do the first row -- REMEMBER to UNDO THIS!!! GM 12/9/2018
-        small_df = symbol_universe_df.head(1)
+        small_df = symbol_universe_df.tail(1)
         print (small_df)
         return_val_from_vectorized = small_df.apply(self.vectorized_symbols_func, axis=1)
         return return_val_from_vectorized
@@ -163,8 +163,10 @@ class TrackStatMomProj:
             benchmark_data = benchmark_px[key]
             excess_rets = pa.get_excess_returns(stock_data=px,
                                                 benchmark_data=benchmark_data)
+
             excess_rets = excess_rets[1:].squeeze()
             excess_rets.rename(ticker + '_' + key + '_excess_rets', inplace=True)
+            print ("excess_rets", excess_rets.head(10))
             excess_rets_list.append(excess_rets)
             sem = lambda excess_rets: excess_rets.std() / np.sqrt(len(excess_rets))
 
@@ -189,7 +191,7 @@ class TrackStatMomProj:
                                             er_rolling_df.columns)
                 #er_rolling_df = er_rolling_df.fillna(method='bfill')
                 excess_rets_list.append(er_rolling_df)
-        df_excess = pd.concat(excess_rets_list, axis=1)[1:]
+        df_excess = pd.concat(excess_rets_list, axis=1)[2:]
         excess_rets_type_list = list(filter(lambda col_nm: ('_excess_rets' in col_nm) is True, df_excess.columns.values))
         p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf = TrackStatMomProj.outlier_analysis(excess_rets)
         excess_log_rets = np.log(1 + excess_rets)
@@ -329,6 +331,7 @@ class TrackStatMomProj:
             excess_rets_hist_plots.append(excess_rolling_rets_scatter_plot)
             excess_rets_hist_plots.append(px_line_plot_er_band_breach_spans)
             col_str = ticker + '_' + benchmark_ticker + '_excess_rets'
+            print ("col_str", col_str)
             excess_rets_normal_ovl, excess_rets_normal_cdf = \
                 ExtendBokeh.bokeh_histogram_overlay_normal(df_excess[col_str],
                                                            ["Excess Returns Hist",

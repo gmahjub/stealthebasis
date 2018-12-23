@@ -498,7 +498,6 @@ class ExtendBokeh(object):
         data['row_cnt'] = data.reset_index().index.values
         rolling_stat_list = list(filter(lambda col_nm: (str(rolling_window_size) + freq in col_nm) is True,
                                         data.columns.values))
-        print ("rolling_stat_list", rolling_stat_list)
         rolling_mean_stat = list(filter(lambda col_nm: ('mean' in col_nm) is True, rolling_stat_list))[0]
         rolling_std_stat = list(filter(lambda col_nm: ('std' in col_nm) is True, rolling_stat_list))[0]
         rolling_skew_stat = list(filter(lambda col_nm: ('skew' in col_nm) is True, rolling_stat_list))[0]
@@ -509,10 +508,7 @@ class ExtendBokeh(object):
         data['upper'] = data[rolling_mean_stat] + data[rolling_std_stat]*band_width
         source = ColumnDataSource(data)
 
-        print ("px_type_color_dict", px_type_color_dict)
-
         for color, px_ret_type in px_type_color_dict.items():
-            print ("color, px_ret_type", color, px_ret_type, type_list)
             ecdf_obj = ECDF(data=data[px_ret_type], percentiles=[0.3, 5.0, 32.0, 68.0, 95.0, 99.7])
             mu = ecdf_obj.get_mu()
             sigma = ecdf_obj.get_sigma()
@@ -521,7 +517,6 @@ class ExtendBokeh(object):
                                         px_ret_type, color)
                 p.line(x_axis, data[px_ret_type], color=color, alpha=0.5, legend=px_ret_type)
             else:
-                print ("px_ret_type", px_ret_type, color)
                 p.scatter(x='date', y=px_ret_type, line_color=None, fill_color=color,
                           fill_alpha=0.7, size=5, source=source, legend=value(px_ret_type))
             band = Band(base='date', lower='lower', upper='upper', level='underlay',

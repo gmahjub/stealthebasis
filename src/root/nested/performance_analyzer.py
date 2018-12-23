@@ -27,7 +27,7 @@ class PerformanceAnalyzer(object):
                            benchmark_data):
 
         excess_returns = stock_data.pct_change().sub(benchmark_data.pct_change(), axis=0)
-        return excess_returns
+        return excess_returns.dropna()
         
     def plot_average_excess_returns(self,
                                     stock_data,
