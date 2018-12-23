@@ -41,9 +41,9 @@ class StatisticalMoments(object):
         kurtosis = stats.kurtosis(Y)
         plt.hist(xs, Y)
         if (kurtosis < 0):
-            print ("Excess Kurtosis is ", kurtosis, ".Because the excess kurtosis is negative, Y is platykurtic. Platykurtic distributions cluster around the mean, so large values in either direction are less likely.")
+            print ("Excess Kurtosis is", kurtosis, ". Because the excess kurtosis is negative, Y is platykurtic. Platykurtic distributions cluster around the mean, so large values in either direction are less likely.")
         elif (kurtosis > 0):
-            print ("Excess Kurtosis is ", kurtosis, ".Because the excess kurtosis is positive, Y is leptokurtic. Leptokurtic distributions have fatter tails, meaning there is more tail risk.")
+            print ("Excess Kurtosis is", kurtosis, ". Because the excess kurtosis is positive, Y is leptokurtic. Leptokurtic distributions have fatter tails, meaning there is more tail risk.")
 
     def jarque_bera_calibration(self,
                                 pvalue_th):
@@ -68,16 +68,23 @@ class StatisticalMoments(object):
                        start_date,
                        end_date):
 
+        StatisticalMoments.LOGGER.info("StatisticalMoments.test_normality(): running function...")
         returns = self.get_stock_returns(ticker, start_date, end_date)
-        print ('Skew:', stats.skew(returns))
-        print ('Mean:', np.mean(returns))
-        print ('Median:', np.median(returns))
+        StatisticalMoments.LOGGER.info('StatisticalMoments.test_normality(): skew is %f', stats.skew(returns))
+        StatisticalMoments.LOGGER.info('StatisticalMoments.test_normality(): mean is %f', np.mean(returns))
+        StatisticalMoments.LOGGER.info('StatisticalMoments.test_normality(): median is %f', np.median(returns))
         plt.hist(returns, 30)
         plt.show()
         _, pvalue, _, _ = jarque_bera(returns)
         if (pvalue > 0.05):
+            StatisticalMoments.LOGGER.info('StatisticalMoments.test_normality(): '
+                                           'jarques-bera test p-value of %f is within 5% error tolerance, '
+                                           'and therefore the returns are likely normal.', pvalue)
             print ("jarques-bera test p-value of ", pvalue, " is within 5% error tolerance, and therefore the returns are likely normal.")
         else:
+            StatisticalMoments.LOGGER.info('StatisticalMoments.test_normality():'
+                                           'jarques-bera test p-value of %f is not within 5% error tolerance; '
+                                           'returns are not likely normal.', pvalue)
             print ("jarques-bera test p-value of ", pvalue, " is not within 5% error tolerance; returns are not likely normal.")
 
     def get_stock_returns(self,
@@ -87,6 +94,7 @@ class StatisticalMoments(object):
                           end_date=str(pd.to_datetime('today')).split(' ')[0],
                           px_type='adjClose'):
 
+        StatisticalMoments.LOGGER.info('StatisticalMoments.get_stock_returns(): running function on ticker %s', ticker)
         symbols = [ticker]
         source = 'Tiingo'
         mdo = TiingoDataObject(start_date = start_date, 
@@ -109,6 +117,7 @@ class StatisticalMoments(object):
                                 end_date=str(pd.to_datetime('today')).split(' ')[0],
                                 px_type='adjClose'):
 
+        StatisticalMoments.LOGGER.info('StatisticalMoments.get_stock_excess_return(): running function...')
         symbols = [stock_ticker, benchmark_ticker]
         source='Tiingo'
         mdo = TiingoDataObject(start_date = start_date,
@@ -119,10 +128,7 @@ class StatisticalMoments(object):
                                           end_date=end_date)
         stock_pricing_df = pricing_dict[stock_ticker]
         benchmark_pricing_df = pricing_dict[benchmark_ticker]
-
-        print (type(stock_pricing_df), type(benchmark_pricing_df))
-        print (stock_pricing_df.head(10))
-        print (benchmark_pricing_df.head(10))
+        return (stock_pricing_df - benchmark_pricing_df)
 
     def get_rolling_excess_returns(self,
                                    ticker,
@@ -136,6 +142,8 @@ class StatisticalMoments(object):
                                    window_size=30,
                                    shift_rets_series=False):
 
+        StatisticalMoments.LOGGER.info('StatisticalMoments.get_rolling_excess_returns(): running function ticker %s, '
+                                       'benchmark %s', ticker, benchmark)
         ticker_roll_rets = self.get_rolling_returns(ticker=ticker,
                                                     freq=freq,
                                                     start_date=start_date,
@@ -164,6 +172,8 @@ class StatisticalMoments(object):
                             window_size=30,
                             shift_rets_series=False):
 
+        StatisticalMoments.LOGGER.info('StatisticalMoments.get_rolling_returns(): running function for ticker %s...',
+                                       ticker)
         if data is None:
             symbols = [ticker]
             source = 'Tiingo'
@@ -249,13 +259,13 @@ class StatisticalMoments(object):
             returns = data
         kurt = stats.kurtosis(returns)
         if kurt < 0:
-            print ("Excess Kurtosis is ", kurt, ".Because the excess kurtosis is negative, "
-                                                "Y is platykurtic. Platykurtic distributions "
-                                                "cluster around the mean, meaning less tail risk.")
+            StatisticalMoments.LOGGER.info('StatisticalMoments.calc_stock_return_kurtosis(): Excess Kurtosis is %f.'
+                                           ' Because the excess kurtosis is negative, Y is platykurtic. Platykurtic'
+                                           ' distributions cluster around the mean, meaning less tail risk.', kurt)
         elif kurt > 0:
-            print ("Excess Kurtosis is ", kurt, ".Because the excess kurtosis is positive, "
-                                                "Y is leptokurtic. Leptokurtic distributions "
-                                                "have fatter tails, meaning there is more tail risk.")
+            StatisticalMoments.LOGGER.info('StatisticalMoments.calc_stock_return_kurtosis(): Excess Kurtosis is %f.'
+                                           ' Because the excess kurtosis is positive, Y is leptokurtic. Leptokurtic'
+                                           ' distributions have fatter tails, meaning there is more tail risk.', kurt)
         return kurt
 
     """Calculate the skew of the returns for the specified ticker, with specificed
@@ -273,7 +283,7 @@ class StatisticalMoments(object):
         else:
             returns = data
         skew = stats.skew(returns)
-        print ('Skew: ', skew)
+        StatisticalMoments.LOGGER.info('StatisticalMoments.calc_stock_return_skew(): Skew = %f', skew)
         return skew
       
     """ Calculate a rolling skew, with window size "window_size", for the specified

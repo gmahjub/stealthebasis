@@ -6,9 +6,11 @@ import matplotlib.pyplot as plt
 
 class StatsTests(object):
 
+    LOGGER = get_logger()
+
     def __init__(self):
 
-        self.logger = get_logger()
+        StatsTests.LOGGER.info("StatsTests.__init__(): running function...")
 
     @staticmethod
     def ks_test_example(mean_of_norm_dist=0.0,
@@ -38,12 +40,10 @@ class StatsTests(object):
                 dist_size,
                 cdf='norm'):
 
-        logger = get_logger()
         mu = np.mean(rvs)
         sigma = np.std(rvs)
-        print(type(rvs))
         theo_rvs = stats.norm.rvs(loc = mu, scale = sigma, size = dist_size)
-        logger.info("StatsTest.ks_test(): RVS mean is %s, RVS StdDev is %s ", str(mu), str(sigma))
+        StatsTests.LOGGER.info("StatsTest.ks_test(): RVS mean is %s, RVS StdDev is %s ", str(mu), str(sigma))
         args = (mu, sigma)
         ks_test_stat, p_value = stats.kstest(rvs=rvs, cdf='norm', args=args, N=dist_size)
         return ks_test_stat, p_value

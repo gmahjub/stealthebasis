@@ -5,6 +5,7 @@ from bokeh.models.widgets import Panel, Tabs
 from bokeh.models import HoverTool, Title, BoxAnnotation, Span, Range1d
 from bokeh.models import CategoricalColorMapper, Band
 from bokeh.models.axes import LinearAxis
+from bokeh.core.properties import value
 import numpy as np
 import pandas as pd
 import scipy as sp
@@ -193,7 +194,7 @@ class ExtendBokeh(object):
         len_x_data_col_list = len(x_data_col_list)
         len_y_data_col_list = len(y_data_col_list)
         if len_x_data_col_list != len_y_data_col_list:
-            LOGGER.error("list of x_data must be equal in length to y_data!")
+            ExtendBokeh.LOGGER.error("list of x_data must be equal in length to y_data!")
         else:
             i = 0
             figure_list = []
@@ -395,12 +396,13 @@ class ExtendBokeh(object):
         for color, px_type, which_axis in px_type_color_axis_list:
             if which_axis is 0:
                 p.y_range = Range1d(start=data[px_type].min(), end=data[px_type].max())
-                p.line(x_axis, data[px_type], color=color, alpha=0.5)
+                p.line(x_axis, data[px_type], color=color, alpha=0.5, legend=ticker)
             else:
                 p.extra_y_ranges = {benchmark_ticker + '_Px': Range1d(start=benchmark_px_series.min().values[0],
                                                                       end=benchmark_px_series.max().values[0])}
                 p.add_layout(LinearAxis(y_range_name=benchmark_ticker + '_Px'), 'right')
-                p.line(x_axis, benchmark_px_series.squeeze(), color='black', y_range_name=benchmark_ticker + '_Px' )
+                p.line(x_axis, benchmark_px_series.squeeze(), color='black', y_range_name=benchmark_ticker + '_Px',
+                       legend=benchmark_ticker)
         if spans_list is not None:
             for span_tuple in spans_list:
                 span_obj_series = span_tuple[1].apply(lambda x: Span(location=x.name,
@@ -409,6 +411,8 @@ class ExtendBokeh(object):
                                                                      line_dash='dashed',
                                                                      line_width=1), 1)
                 span_obj_series.apply(lambda x: p.add_layout(x), 1)
+        p.legend.location = "top_left"
+        p.legend.background_fill_color = "#fefefe"
         return p
 
     @staticmethod
@@ -447,16 +451,17 @@ class ExtendBokeh(object):
             ecdf_obj = ECDF(data=data[px_ret_type], percentiles=[0.3, 5.0, 32.0, 68.0, 95.0, 99.7])
             mu = ecdf_obj.get_mu()
             sigma = ecdf_obj.get_sigma()
-            ExtendBokeh.LOGGER.info("ExtendBokeh.bokeh_px_returns_plot(): plotting %s in line color %s", 
+            ExtendBokeh.LOGGER.info("ExtendBokeh.bokeh_rolling_pxret_skew(): plotting %s in line color %s",
                                     px_ret_type, color)
-            p_line.line(x="x_coord", y=px_ret_type, color=color, alpha=0.5, source=source)
+            p_line.line(x="x_coord", y=px_ret_type, color=color, alpha=0.5, source=source, legend=value(px_ret_type))
         if scatter is True:
             scatter_source=source
             if skew_filter is not None:
                 filtered_data = data[data[type_list[1]] < skew_filter[0]]
                 filtered_data=pd.concat([filtered_data, data[data[type_list[1]] > skew_filter[1]]])
                 scatter_source = ColumnDataSource(filtered_data)
-            p_scat.scatter(x=type_list[1], y=type_list[0], line_color=None, size=5, source=scatter_source)
+            p_scat.scatter(x=type_list[1], y=type_list[0], line_color=None, size=5,
+                           source=scatter_source, legend=value(type_list[0]))
             # regression line
             regression = np.polyfit(data[type_list[1]][rolling_window_size:], data[type_list[0]][rolling_window_size:], 1)
             min_val = data[type_list[1]].min()
@@ -465,7 +470,12 @@ class ExtendBokeh(object):
             r_x = np.linspace(start=min_val, stop=max_val, num=len(data))
             r_y = r_x*regression[0] + regression[1]
             p_scat.line(x=r_x, y=r_y, color = 'red')
-            
+
+        p_scat.legend.location = "top_left"
+        p_scat.legend.background_fill_color = "#fefefe"
+        p_line.legend.location = "top_left"
+        p_line.legend.background_fill_color = "#fefefe"
+
         return p_line, p_scat
 
 
@@ -486,9 +496,9 @@ class ExtendBokeh(object):
         p.add_layout(Title(text=title[0], text_font_size="14pt"), place='above')
         px_type_color_dict = dict(zip(color_list[0:len(type_list)], type_list))
         data['row_cnt'] = data.reset_index().index.values
-
         rolling_stat_list = list(filter(lambda col_nm: (str(rolling_window_size) + freq in col_nm) is True,
                                         data.columns.values))
+        print ("rolling_stat_list", rolling_stat_list)
         rolling_mean_stat = list(filter(lambda col_nm: ('mean' in col_nm) is True, rolling_stat_list))[0]
         rolling_std_stat = list(filter(lambda col_nm: ('std' in col_nm) is True, rolling_stat_list))[0]
         rolling_skew_stat = list(filter(lambda col_nm: ('skew' in col_nm) is True, rolling_stat_list))[0]
@@ -498,30 +508,36 @@ class ExtendBokeh(object):
         data['lower'] = data[rolling_mean_stat] - data[rolling_std_stat]*band_width
         data['upper'] = data[rolling_mean_stat] + data[rolling_std_stat]*band_width
         source = ColumnDataSource(data)
+
+        print ("px_type_color_dict", px_type_color_dict)
+
         for color, px_ret_type in px_type_color_dict.items():
+            print ("color, px_ret_type", color, px_ret_type, type_list)
             ecdf_obj = ECDF(data=data[px_ret_type], percentiles=[0.3, 5.0, 32.0, 68.0, 95.0, 99.7])
             mu = ecdf_obj.get_mu()
             sigma = ecdf_obj.get_sigma()
             if (not scatter):
                 ExtendBokeh.LOGGER.info("ExtendBokeh.bokeh_px_returns_plot(): plotting %s in line color %s",
                                         px_ret_type, color)
-                p.line(x_axis, data[px_ret_type], color=color, alpha=0.5)
+                p.line(x_axis, data[px_ret_type], color=color, alpha=0.5, legend=px_ret_type)
             else:
-                p.scatter(x='date', y=px_ret_type, line_color=None, fill_alpha=0.3, size=5, source=source)
+                print ("px_ret_type", px_ret_type, color)
+                p.scatter(x='date', y=px_ret_type, line_color=None, fill_color=color,
+                          fill_alpha=0.7, size=5, source=source, legend=value(px_ret_type))
             band = Band(base='date', lower='lower', upper='upper', level='underlay',
                         fill_alpha=1.0, line_width=1, line_color='black', source=source)
             p.add_layout(band)
 
-        minus_three_sigma_box = BoxAnnotation(bottom=mu-3*sigma, top=mu-2*sigma, fill_alpha=0.1,
+        minus_three_sigma_box = BoxAnnotation(bottom=mu-3*sigma, top=mu-2*sigma, fill_alpha=0.2,
                                               fill_color='red')
-        minus_two_sigma_box = BoxAnnotation(bottom=mu-2*sigma, top=mu-sigma, fill_alpha=0.1,
+        minus_two_sigma_box = BoxAnnotation(bottom=mu-2*sigma, top=mu-sigma, fill_alpha=0.2,
                                             fill_color='lightcoral')
-        minus_one_sigma_box = BoxAnnotation(bottom=mu-sigma, top=mu, fill_alpha=0.1, fill_color='lightsalmon')
-        plus_three_sigma_box = BoxAnnotation(top=mu+3*sigma, bottom=mu+2*sigma, fill_alpha=0.1,
-                                             fill_color='green')
-        plus_two_sigma_box = BoxAnnotation(top=mu+2*sigma, bottom=mu+sigma, fill_alpha=0.1,
-                                           fill_color='limegreen')
-        plus_one_sigma_box = BoxAnnotation(top=mu+sigma, bottom=mu, fill_alpha=0.1, fill_color='palegreen')
+        minus_one_sigma_box = BoxAnnotation(bottom=mu-sigma, top=mu, fill_alpha=0.2, fill_color='lightsalmon')
+        plus_three_sigma_box = BoxAnnotation(top=mu+3*sigma, bottom=mu+2*sigma, fill_alpha=0.2,
+                                             fill_color='limegreen')
+        plus_two_sigma_box = BoxAnnotation(top=mu+2*sigma, bottom=mu+sigma, fill_alpha=0.2,
+                                           fill_color='green')
+        plus_one_sigma_box = BoxAnnotation(top=mu+sigma, bottom=mu, fill_alpha=0.2, fill_color='palegreen')
 
         p.add_layout(minus_three_sigma_box)
         p.add_layout(minus_two_sigma_box)
@@ -529,6 +545,9 @@ class ExtendBokeh(object):
         p.add_layout(plus_three_sigma_box)
         p.add_layout(plus_two_sigma_box)
         p.add_layout(plus_one_sigma_box)
+
+        p.legend.location = "bottom_right"
+        p.legend.background_fill_color = "#fefefe"
 
         return p
 

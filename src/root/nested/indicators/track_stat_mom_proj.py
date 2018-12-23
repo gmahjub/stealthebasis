@@ -269,7 +269,6 @@ class TrackStatMomProj:
 
         hist_plots = []
         excess_rets_hist_plots = []
-        spans_tuples_er_dict = {}
         for benchmark_ticker in benchmark_ticker_list:
             spans_tuples_list_er = ExtendBokeh.bokeh_create_mean_var_spans(df_excess,
                                                                            ticker=ticker,
@@ -278,14 +277,13 @@ class TrackStatMomProj:
                                                                            rolling_window_size=win_price_freq,
                                                                            var_bandwidth=3.0,
                                                                            color=('red', 'green'))
-            spans_tuples_er_dict[benchmark_ticker] = spans_tuples_list_er
             px_line_plot_er_band_breach_spans = \
                 ExtendBokeh.bokeh_px_line_plot(data=df_px,
                                                ticker=ticker,
                                                benchmark_px_series=benchmark_px[benchmark_ticker],
                                                benchmark_ticker=benchmark_ticker,
                                                title=[co_nm + ' Px Chart Band Breaches'],
-                                               subtitle=["Exchange Ticker: " + ticker],
+                                               subtitle=["Spread: " + ticker + '-' + benchmark_ticker],
                                                type_list=['adjClose', 'adjClose'],
                                                spans_list=spans_tuples_list_er,
                                                which_axis_list=[0,1])
@@ -294,24 +292,49 @@ class TrackStatMomProj:
                 ExtendBokeh.bokeh_px_returns_plot(data=df_excess,
                                                   freq=price_freq,
                                                   title=[co_nm + ' Excess Returns'],
-                                                  subtitle=["Exchange Ticker: " + benchmark_ticker + '-' + ticker],
+                                                  subtitle=["Spread: " + ticker + '-' + benchmark_ticker],
                                                   type_list=excess_rets_type_list,
                                                   scatter=False,
                                                   rolling_window_size=win_price_freq)
+            ticker_bm_excess_ret = list(filter(lambda col_nm:
+                                               (benchmark_ticker + '_excess_rets' in col_nm) is True,
+                                               excess_rets_type_list))
+            ticker_bm_rolling_excess_ret = list(filter(lambda col_nm:
+                                                       (benchmark_ticker + '_rolling_excess_rets' in col_nm) is True,
+                                                       excess_rets_type_list))
+            print("ticker_bm_excess_ret", ticker_bm_excess_ret)
+            print("ticker_bm_rolling_excess_ret", ticker_bm_rolling_excess_ret)
+
             excess_rets_scatter_plot = \
                 ExtendBokeh.bokeh_px_returns_plot(data=df_excess,
                                                   freq=price_freq,
-                                                  title=[co_nm + ' Px Returns'],
-                                                  subtitle=['Exchange Ticker: ' + ticker],
-                                                  type_list=excess_rets_type_list,
+                                                  title=[co_nm + ' Excess Returns'],
+                                                  subtitle=['Spread: ' + ticker + '-' + benchmark_ticker],
+                                                  type_list=ticker_bm_excess_ret,
+                                                  scatter=True,
+                                                  rolling_window_size=win_price_freq)
+
+            excess_rolling_rets_scatter_plot = \
+                ExtendBokeh.bokeh_px_returns_plot(data=df_excess,
+                                                  freq=price_freq,
+                                                  title=[co_nm + ' ' + str(win_price_freq) + price_freq +
+                                                         ' Rolling Excess Returns'],
+                                                  subtitle=['Spread: ' + ticker + '-' + benchmark_ticker],
+                                                  type_list=ticker_bm_rolling_excess_ret,
                                                   scatter=True,
                                                   rolling_window_size=win_price_freq)
 
             excess_rets_hist_plots.append(excess_rets_line_plot)
             excess_rets_hist_plots.append(excess_rets_scatter_plot)
+            excess_rets_hist_plots.append(excess_rolling_rets_scatter_plot)
             excess_rets_hist_plots.append(px_line_plot_er_band_breach_spans)
-        #px_rets_normal_ovl, px_rets_normal_cdf = \
-        #    ExtendBokeh.bokeh_histogram_overlay_normal(px_rets)
+            col_str = ticker + '_' + benchmark_ticker + '_excess_rets'
+            excess_rets_normal_ovl, excess_rets_normal_cdf = \
+                ExtendBokeh.bokeh_histogram_overlay_normal(df_excess[col_str],
+                                                           ["Excess Returns Hist",
+                                                           "Excess Returns CDF"])
+            excess_rets_hist_plots.append(excess_rets_normal_ovl)
+            excess_rets_hist_plots.append(excess_rets_normal_cdf)
         #px_rets_lognormal_ovl, px_rets_lognormal_cdf = \
         #    ExtendBokeh.bokeh_histogram_overlay_normal(px_log_rets,
         #                                               titles=['Px Log Returns Histogram',
