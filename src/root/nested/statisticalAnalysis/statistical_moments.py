@@ -366,7 +366,6 @@ class StatisticalMoments(object):
         outliers_removed = px_returns_series[~(px_returns_series.isin(outliers))]
         StatisticalMoments.LOGGER.info('StatisticalMoments.remove_outliers_from_non_normal_dist(): '
                                        'Non-outlier observations (Series): %d' % len(outliers_removed))
-        print ("outliers removed", outliers_removed)
         return outliers_removed
 
     @staticmethod

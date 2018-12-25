@@ -103,7 +103,7 @@ class TrackStatMomProj:
                   symbol_universe_df):
 
         ### for testing, just do the first row -- REMEMBER to UNDO THIS!!! GM 12/9/2018
-        small_df = symbol_universe_df.tail(1)
+        small_df = symbol_universe_df.head(1)
         print (small_df)
         return_val_from_vectorized = small_df.apply(self.vectorized_symbols_func, axis=1)
         return return_val_from_vectorized
@@ -166,7 +166,6 @@ class TrackStatMomProj:
 
             excess_rets = excess_rets[1:].squeeze()
             excess_rets.rename(ticker + '_' + key + '_excess_rets', inplace=True)
-            print ("excess_rets", excess_rets.head(10))
             excess_rets_list.append(excess_rets)
             sem = lambda excess_rets: excess_rets.std() / np.sqrt(len(excess_rets))
 
@@ -271,7 +270,12 @@ class TrackStatMomProj:
 
         hist_plots = []
         excess_rets_hist_plots = []
+        excess_rets_olanalysis_plots = []
+        first_ticker_date = df_px.iloc[0].name
         for benchmark_ticker in benchmark_ticker_list:
+            filtered_excess_rets_type_list = list(filter(lambda col_nm:
+                                                         (ticker + '_' + benchmark_ticker in col_nm) is True,
+                                                         excess_rets_type_list))
             spans_tuples_list_er = ExtendBokeh.bokeh_create_mean_var_spans(df_excess,
                                                                            ticker=ticker,
                                                                            benchmark_ticker=benchmark_ticker,
@@ -282,7 +286,7 @@ class TrackStatMomProj:
             px_line_plot_er_band_breach_spans = \
                 ExtendBokeh.bokeh_px_line_plot(data=df_px,
                                                ticker=ticker,
-                                               benchmark_px_series=benchmark_px[benchmark_ticker],
+                                               benchmark_px_series=benchmark_px[benchmark_ticker].loc[first_ticker_date:,],
                                                benchmark_ticker=benchmark_ticker,
                                                title=[co_nm + ' Px Chart Band Breaches'],
                                                subtitle=["Spread: " + ticker + '-' + benchmark_ticker],
@@ -295,7 +299,7 @@ class TrackStatMomProj:
                                                   freq=price_freq,
                                                   title=[co_nm + ' Excess Returns'],
                                                   subtitle=["Spread: " + ticker + '-' + benchmark_ticker],
-                                                  type_list=excess_rets_type_list,
+                                                  type_list=filtered_excess_rets_type_list,
                                                   scatter=False,
                                                   rolling_window_size=win_price_freq)
             ticker_bm_excess_ret = list(filter(lambda col_nm:
@@ -304,9 +308,6 @@ class TrackStatMomProj:
             ticker_bm_rolling_excess_ret = list(filter(lambda col_nm:
                                                        (benchmark_ticker + '_rolling_excess_rets' in col_nm) is True,
                                                        excess_rets_type_list))
-            print("ticker_bm_excess_ret", ticker_bm_excess_ret)
-            print("ticker_bm_rolling_excess_ret", ticker_bm_rolling_excess_ret)
-
             excess_rets_scatter_plot = \
                 ExtendBokeh.bokeh_px_returns_plot(data=df_excess,
                                                   freq=price_freq,
@@ -331,23 +332,20 @@ class TrackStatMomProj:
             excess_rets_hist_plots.append(excess_rolling_rets_scatter_plot)
             excess_rets_hist_plots.append(px_line_plot_er_band_breach_spans)
             col_str = ticker + '_' + benchmark_ticker + '_excess_rets'
-            print ("col_str", col_str)
             excess_rets_normal_ovl, excess_rets_normal_cdf = \
                 ExtendBokeh.bokeh_histogram_overlay_normal(df_excess[col_str],
                                                            ["Excess Returns Hist",
                                                            "Excess Returns CDF"])
             excess_rets_hist_plots.append(excess_rets_normal_ovl)
             excess_rets_hist_plots.append(excess_rets_normal_cdf)
-        #px_rets_lognormal_ovl, px_rets_lognormal_cdf = \
-        #    ExtendBokeh.bokeh_histogram_overlay_normal(px_log_rets,
-        #                                               titles=['Px Log Returns Histogram',
-        #                                                       'Px Log Returns CDF'])
-        #hist_plots.append(px_rets_normal_ovl)
-        #hist_plots.append(px_rets_normal_cdf)
-        #hist_plots.append(p_iqr_hist)
-        #hist_plots.append(p_iqr_cdf)
-        #hist_plots.append(p_iqr_3sr_hist)
-        #hist_plots.append(p_iqr_3sr_cdf)
+            #px_rets_lognormal_ovl, px_rets_lognormal_cdf = \
+            #    ExtendBokeh.bokeh_histogram_overlay_normal(px_log_rets,
+            #                                               titles=['Px Log Returns Histogram',
+            #                                                       'Px Log Returns CDF'])
+            excess_rets_olanalysis_plots.append(p_iqr_hist_er)
+            excess_rets_olanalysis_plots.append(p_iqr_cdf_er)
+            excess_rets_olanalysis_plots.append(p_iqr_3sr_hist_er)
+            excess_rets_olanalysis_plots.append(p_iqr_3sr_cdf_er)
         #hist_plots.append(px_rets_lognormal_ovl)
         #hist_plots.append(px_rets_lognormal_cdf)
 
@@ -445,8 +443,8 @@ class TrackStatMomProj:
 
         # px_rets_weibull_ovl = ext_bokeh.bokeh_histogram_overlay_weibull(px_rets)
         # hist_plots.append(px_rets_weibull_ovl)
-        html_output_file_title = ticker + '.hist.html'
         html_output_file_path = OSMuxImpl.get_proper_path('/workspace/data/bokeh/html/')
+        html_output_file_title = ticker + '.hist.html'
         html_output_file = html_output_file_path + html_output_file_title
 
         html_output_file_title_skew_analysis = ticker + '.skew.html'
@@ -454,6 +452,10 @@ class TrackStatMomProj:
 
         html_output_file_title_excess_rets_analysis = ticker + '.excess.rets.html'
         html_output_file_excess_rets_analysis = html_output_file_path + html_output_file_title_excess_rets_analysis
+
+        html_output_file_title_excess_rets_olanalysis = ticker + '.outlier.analysis.html'
+        html_output_file_excess_rets_olanalysis = html_output_file_path + \
+                                                        html_output_file_title_excess_rets_olanalysis
 
         if (save_or_show is 'show'):
             ExtendBokeh.show_hist_plots(hist_plots,
@@ -465,6 +467,9 @@ class TrackStatMomProj:
             ExtendBokeh.show_hist_plots(excess_rets_hist_plots,
                                         html_output_file_excess_rets_analysis,
                                         html_output_file_title_excess_rets_analysis)
+            ExtendBokeh.show_hist_plots(excess_rets_olanalysis_plots,
+                                        html_output_file_excess_rets_olanalysis,
+                                        html_output_file_title_excess_rets_olanalysis)
         else:
             ExtendBokeh.save_html(hist_plots,
                                   html_output_file,
@@ -475,6 +480,9 @@ class TrackStatMomProj:
             ExtendBokeh.save_html(excess_rets_hist_plots,
                                   html_output_file_excess_rets_analysis,
                                   html_output_file_title_excess_rets_analysis)
+            ExtendBokeh.save_html(excess_rets_olanalysis_plots,
+                                  html_output_file_excess_rets_olanalysis,
+                                  html_output_file_title_excess_rets_olanalysis)
 
         # below is pyplot functionality - not using pyplot as it requires subscription
         # hist_data = [go.Histogram(y=px_rets)]
