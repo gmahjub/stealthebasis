@@ -1,5 +1,6 @@
 import requests
 import pandas as pd
+import pyEX as pyex
 from root.nested import get_logger
 
 

@@ -11,7 +11,7 @@ class StatisticalMoments(object):
     """description of class"""
 
     LOGGER = get_logger()
-    MAX_TICKER_PULL_SIZE = 3
+    MAX_TICKER_PULL_SIZE = 10
 
     def __init__(self, **kwargs):
         return super().__init__(**kwargs)
@@ -208,7 +208,7 @@ class StatisticalMoments(object):
             symbols = [ticker]
         else:
             symbols = ticker
-        if len(symbols) > 3:
+        if len(symbols) > StatisticalMoments.MAX_TICKER_PULL_SIZE:
             StatisticalMoments.LOGGER.error("max number of ticker pulls allowed at once is 3, "
                                             "%s given!", str(len(symbols)))
             raise ValueError("max number of ticker to pull at once is " + \
@@ -231,6 +231,49 @@ class StatisticalMoments(object):
             pricing = pricing_df[fields]
             return_dict[ticker] = pricing
         return return_dict
+
+    def get_pricing_df_ready(self,
+                             ticker,
+                             freq='D',
+                             start_date='2010-01-01',
+                             end_date=str(pd.to_datetime('today')).split(' ')[0],
+                             fields=['adjOpen', 'adjHigh', 'adjLow', 'adjClose']):
+
+        if (type(ticker) is not list):
+            symbols = [ticker]
+        else:
+            symbols = ticker
+        if len(symbols) > StatisticalMoments.MAX_TICKER_PULL_SIZE:
+            StatisticalMoments.LOGGER.error("max number of ticker pulls allowed at once is 3, "
+                                            "%s given!", str(len(symbols)))
+            raise ValueError("max number of ticker to pull at once is " + \
+                             str(StatisticalMoments.MAX_TICKER_PULL_SIZE) + \
+                             ", input list is length " + str(len(symbols)) + "!!")
+            return
+
+        source = 'Tiingo'
+        mdo = TiingoDataObject(start_date=start_date,
+                               end_date=end_date,
+                               source=source,
+                               symbols=symbols)
+        pricing_dict = mdo.get_px_data_df(start_date,
+                                          end_date)
+        return_df = None
+        for ticker in symbols:
+            pricing_df = pricing_dict[ticker]
+            if freq is not 'D':
+                pricing_df=self.down_sample_daily_price_data(pricing=pricing_df, to_freq=freq)
+            pricing = pricing_df[fields]
+            new_col_nm_list = []
+            for col_nm in pricing.columns:
+                new_col_nm = ticker + '_' + col_nm
+                new_col_nm_list.append(new_col_nm)
+            pricing.columns = new_col_nm_list
+            if return_df is None:
+                return_df = pricing
+            else:
+                return_df = pd.concat([return_df, pricing], axis=1)
+        return return_df
 
     def down_sample_daily_price_data(self,
                                      pricing,

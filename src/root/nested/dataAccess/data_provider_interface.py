@@ -11,9 +11,16 @@ import requests
 import pandas as pd
 from datetime import datetime
 
+SP500_HOLDINGS_URL = pd.read_html('https://etfdailynews.com/etf/spy/', attrs={'id': 'etfs-that-own'})
+NQ100_HOLDINGS_URL = pd.read_html('https://etfdailynews.com/etf/qqq/', attrs={'id': 'etfs-that-own'})
+DOW30_HOLDINGS_URL = pd.read_html('https://etfdailynews.com/etf/dia/', attrs={'id': 'etfs-that-own'})
+RUSSELL1000_HOLDINGS_URL = "https://www.ishares.com/us/products/239707/ishares-russell-1000" \
+                           "-etf/1467271812596.ajax?fileType=csv&fileName=IWB_holdings&dataType=fund"
+RUSSELL3000_HOLDINGS_URL = "https://www.ishares.com/us/products/239714/ishares-russell-3000" \
+                           "-etf/1467271812596.ajax?fileType=csv&fileName=IWV_holdings&dataType=fund"
 
 class DataProviderInterface(object):
-    
+
     def __init__(self):
         
         self.logger = get_logger()
@@ -59,8 +66,7 @@ class DataProviderInterface(object):
             The Russell 1000 is the 1000 largest companies (by market cap) in
             the USA.
         """
-        url = "https://www.ishares.com/us/products/239707/ishares-russell-1000 \
-            -etf/1467271812596.ajax?fileType=csv&fileName=IWB_holdings&dataType=fund"
+        url = RUSSELL1000_HOLDINGS_URL
         response = requests.get(url)
         with open(self.total_pwd_stock_universe_file, 'wb') as f:
             f.write(response.content)
@@ -68,8 +74,7 @@ class DataProviderInterface(object):
 
     def download_russell_1000_stock_universe(self):
 
-        url = "https://www.ishares.com/us/products/239707/ishares-russell-1000 \
-            -etf/1467271812596.ajax?fileType=csv&fileName=IWB_holdings&dataType=fund"
+        url = RUSSELL1000_HOLDINGS_URL
         response = requests.get(url)
         with open(self.total_pwd_russell1000, 'wb') as f:
             f.write(response.content)
@@ -84,8 +89,7 @@ class DataProviderInterface(object):
 
     def download_russell_3000_stock_universe(self):
 
-        url = "https://www.ishares.com/us/products/239714/ishares-russell-3000" \
-              "-etf/1467271812596.ajax?fileType=csv&fileName=IWV_holdings&dataType=fund"
+        url = RUSSELL3000_HOLDINGS_URL
         response = requests.get(url)
         with open(self.total_pwd_russell3000, 'wb') as f:
             f.write(response.content)
@@ -97,6 +101,30 @@ class DataProviderInterface(object):
         else:
             self.logger.error("DataObject.download_russsell_3000_stock_universe: failed download %s",
                               str(error_response))
+
+    @staticmethod
+    def download_sp500_holdings_symbol_list():
+
+        url = SP500_HOLDINGS_URL
+        # below code from IEX example @ https://github.com/timkpaine/pyEX
+        sp500 = [x for x in url[0].Symbol.values.tolist() if isinstance(x, str)]
+        # returns a list of tickers
+        return sp500
+
+    @staticmethod
+    def download_nq100_holdings_symbol_list():
+
+        url = NQ100_HOLDINGS_URL
+        nq100 = [x for x in url[0].Symbol.values.tolist() if isinstance(x, str)]
+        # returns a list of tickers
+        return nq100
+
+    @staticmethod
+    def download_dow30_holdings_symbol_list():
+
+        url = DOW30_HOLDINGS_URL
+        dow30 = [x for x in url[0].Symbol.values.tolist() if isinstance(x, str)]
+        return dow30
 
     def get_stock_universe_file_as_df(self,
                                       stock_universe_filename):
