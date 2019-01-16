@@ -31,8 +31,14 @@ class SimFinApi:
     def get_sim_ids(self,
                     tickers):
 
+        # check if we already have the sim_id locally so that we don't have to pull from remote
         sim_ids = []
         for ticker in tickers:
+            simid = SecureKeysAccess.get_ticker_simid_static(ticker)
+            if simid is not "":
+                self.logger.info("SimFinApi.get_sim_ids(): found simid %s for ticker %s locally!", simid, ticker)
+                sim_ids.append(simid)
+                continue
             request_url = f'https://simfin.com/api/v1/info/find-id/ticker/{ticker}?api-key={self.api_key}'
             self.logger.info("SimFinApi.get_sim_ids(): request_url is %s", request_url)
             content = requests.get(request_url)
@@ -42,6 +48,10 @@ class SimFinApi:
             else:
                 self.logger.info("SimFinApi.get_sim_ids(): sim_id for ticker %s is %s", ticker, data[0]['simId'])
                 sim_ids.append(data[0]['simId'])
+                SecureKeysAccess.insert_simid(ticker, data[0]['simId'])
+                self.logger.info("SimFinApi.get_sim_ids(): inserted sim_id %s for ticker %s in local file!",
+                                 data[0]['simId'],
+                                 ticker)
 
         return (sim_ids)
 
@@ -59,6 +69,23 @@ class SimFinApi:
                      writer):
 
         writer.close()
+
+    def get_quarterly_eps(self):
+
+        # get quarter by quarter eps, instead of TTM
+        # TTM = trailing 12 month <insert stat i.e. eps>
+        data = { "search": [ {'indicatorId': "4-12",
+                              'meta': [ { 'id': 6,
+                                          'value': 'TTM',
+                                          'operator': 'eq'},]}],
+                 "simIdList": [
+                     111052
+                 ]
+                 }
+        request_url = f'https://simfin.com/api/v1/'
+        request_url = f'https://simfin.com/api/v1/finder?api-key={self.api_key}'
+        r = requests.post(request_url, json=data)
+        print (r.content)
 
     def get_eps(self):
 
@@ -153,7 +180,7 @@ year_start = 2010
 year_end = 2018
 output_file = 'simfin_data.xlsx'
 
-sf.get_eps()
+#sf.get_quarterly_eps()
 
 #sim_ids = sf.get_sim_ids(tickers)
 #sf.get_data(sim_ids=sim_ids,

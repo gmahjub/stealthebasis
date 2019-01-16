@@ -3,6 +3,9 @@ from oauth2client.service_account import ServiceAccountCredentials
 from root.nested.SysOs.os_mux import OSMuxImpl
 from root.nested import get_logger
 
+""" Reference Site : 
+https://www.twilio.com/blog/2017/02/an-easy-way-to-read-and-write-to-a-google-spreadsheet-in-python.html
+"""
 
 class SecureKeysAccess:
 
@@ -58,6 +61,23 @@ class SecureKeysAccess:
         self.logger.error("SecureKeysAccess.get_vendor_api_key(): input vendor_name %s not found in api_keys!", vendor_name)
 
     @staticmethod
+    def get_ticker_simid_static(ticker):
+
+        google_api_filesdir = '/workspace/data/googleapi'
+        local_data_file_pwd = OSMuxImpl.get_proper_path(google_api_filesdir)
+        google_api_creds_file = local_data_file_pwd + "google_driveAccess_client_secrets.json"
+        google_api_creds = ServiceAccountCredentials.from_json_keyfile_name(google_api_creds_file,
+                                                                            SecureKeysAccess.SCOPE)
+        client = gspread.authorize(google_api_creds)
+        sheet_filename = "simfin_simid.csv"
+        simfin_simid_sheet = client.open(sheet_filename).sheet1
+        list_of_hashes = simfin_simid_sheet.get_all_records()
+        for hash in list_of_hashes:
+            if hash['Symbol'] == ticker:
+                return hash['SIM_ID']
+        return ""
+
+    @staticmethod
     def get_vendor_api_key_static(vendor):
 
         google_api_filesdir = '/workspace/data/googleapi/'
@@ -75,6 +95,32 @@ class SecureKeysAccess:
         return ""
 
     @staticmethod
+    def insert_simid(ticker, simid):
+
+        google_api_filesdir = '/workspace/data/googleapi/'
+        local_data_file_pwd = OSMuxImpl.get_proper_path(google_api_filesdir)
+        google_api_creds_file = local_data_file_pwd + "google_driveAccess_client_secrets.json"
+        google_api_creds = ServiceAccountCredentials.from_json_keyfile_name(
+            google_api_creds_file, SecureKeysAccess.SCOPE)
+        client = gspread.authorize(google_api_creds)
+        sheet_filename = "simfin_simid.csv"
+        simfin_simid_sheet = client.open(sheet_filename).sheet1
+        the_recs = simfin_simid_sheet.get_all_records()
+        num_recs = len(the_recs)
+        SecureKeysAccess.LOGGER.info("there are %s entries in simfin_simid_file %s",
+                                     num_recs, sheet_filename)
+        for rec in the_recs:
+            if rec['Symbol'] == ticker:
+                SecureKeysAccess.LOGGER.warn(
+                    "attempting to insert a record where the ticker %s already exists, use update instead!",
+                    ticker)
+                return
+        row_to_insert = [ticker, simid]
+        simfin_simid_sheet.insert_row(row_to_insert, num_recs + 2)
+        SecureKeysAccess.LOGGER.info("inserted row value %s at index %s",
+                                     str(row_to_insert), str(num_recs + 1))
+
+    @staticmethod
     def insert_api_key(vendor, api_key):
 
         google_api_filesdir = '/workspace/data/googleapi/'
@@ -87,7 +133,7 @@ class SecureKeysAccess:
         api_key_sheet = client.open(sheet_filename).sheet1
         the_recs = api_key_sheet.get_all_records()
         num_recs = len(the_recs)
-        SecureKeysAccess.LOGGER.info("there are %s entires in api_key_file %s",
+        SecureKeysAccess.LOGGER.info("there are %s entries in api_key_file %s",
                                      num_recs, sheet_filename)
         # we don't want to insert duplicate VENDOR - check if VENDOR already exists
         # throw warning/error if the vendor already exists.
