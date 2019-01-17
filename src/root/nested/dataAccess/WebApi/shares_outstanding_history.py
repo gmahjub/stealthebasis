@@ -19,6 +19,25 @@ class SharesOutstandingHistory:
                           'T': 1000000000000.0}
 
     @staticmethod
+    def get_simfin_indicator_ids():
+
+        simfin_ind_id_list_url = 'https://simfin.com/data/help/main?topic=api-indicators'
+        try:
+            html_obj = pd.read_html(simfin_ind_id_list_url)
+        except HTTPError as httperror:
+            error_code = httperror.getcode()
+            if error_code == 404:
+                LOGGER.error("invalid URL %s", simfin_ind_id_list_url)
+                return error_code
+            else:
+                LOGGER.error("SharesOutstandingHistory.get_simfin_indicator_ids(): HTTPError code %s", error_code)
+                return error_code
+        df = html_obj[0].rename(columns = html_obj[0].iloc[0]).drop(html_obj[0].index[0]).reset_index()
+        df.drop('index', axis = 1, inplace=True)
+        df.set_index('ID', inplace=True)
+        return df
+
+    @staticmethod
     def get_shares_outstanding_history(symbol):
 
         complete_url = BASE_URL + str.lower(symbol) + '/'
