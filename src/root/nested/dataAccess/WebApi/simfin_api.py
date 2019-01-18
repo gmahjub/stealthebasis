@@ -147,6 +147,30 @@ class SimFinApi:
         # returns the month of the fiscal year end. eg. 9 -> September
         return data_dict['fyearEnd']
 
+    def get_co_sector_code(self,
+                           sim_id):
+
+        request_url = f'https://simfin.com/api/v1/companies/id/{sim_id}?api-key={self.api_key}'
+        content = requests.get(request_url)
+
+        try:
+            data_dict = content.json()
+        except IndexError:
+            ret_val = content.json()
+            try:
+                error_msg = ret_val['error']
+                self.logger.error('SimFinApi.get_co_sector_code(): error message is %s', error_msg)
+            except KeyError:
+                self.logger.error("SimFinApi.get_co_sector_code(): unknown error!")
+            return
+        except Exception as excp:
+            self.logger.error("SimFinApi.get_co_sector_code(): %s", str(excp))
+            self.logger.error("SimFinApi.get_co_sector_code(): content from request_url get(): %s", content.text)
+            self.logger.error("SimFinApi.get_co_sector_code(): %s %s", type(excp).__name__, str(excp.args))
+            return
+
+        return data_dict['sectorCode']
+
     def get_co_num_emps(self,
                         sim_id):
 
@@ -203,6 +227,9 @@ class SimFinApi:
                 self.logger.error('SimFinApi.get_co_founding_year(): exception thrown is %s', str(excp))
                 return
             self.logger.error("SimFinApi.get_co_founding_year(): error message is %s", error_msg)
+            return
+        except Exception as excp:
+            self.logger.error("SimFinApi.get_co_founding_year(): %s", str(excp))
             return
 
         if co_founding_year_dict['indicatorName'] is not None:
@@ -760,3 +787,4 @@ print (sf.get_co_gross_profit(111052))
 print (sf.get_co_operating_expenses(111052))
 print (sf.get_co_indicator(111052))
 print (sf.get_co_fiscal_year_end(111052))
+print (sf.get_co_sector_code(111052))
