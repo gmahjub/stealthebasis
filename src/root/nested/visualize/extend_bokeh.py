@@ -1,9 +1,9 @@
 from bokeh.plotting import figure, ColumnDataSource
 from bokeh.io import output_file, show, save
-from bokeh.layouts import row, column, gridplot
-from bokeh.models.widgets import Panel, Tabs
+from bokeh.layouts import row, column, gridplot, widgetbox
+from bokeh.models.widgets import Panel, Tabs, DataTable, DateFormatter, TableColumn
 from bokeh.models import HoverTool, Title, BoxAnnotation, Span, Range1d
-from bokeh.models import CategoricalColorMapper, Band
+from bokeh.models import CategoricalColorMapper, Band, ColumnDataSource
 from bokeh.models.axes import LinearAxis
 from bokeh.core.properties import value
 import numpy as np
@@ -257,6 +257,14 @@ class ExtendBokeh(object):
         figure_obj.add_tools(output_html_filename)
         output_file('hover.html')
         show(figure_obj)
+
+    @staticmethod
+    def bokeh_data_table(dataframe):
+
+        source = ColumnDataSource(dataframe)
+        columns = [TableColumn(field=col_nm, title=col_nm) for col_nm in dataframe.columns]
+        data_table = DataTable(source=source, columns = columns, width=1600, height = 800)
+        return data_table
 
     @staticmethod
     def bokeh_histogram_overlay_normal(data,
@@ -565,6 +573,13 @@ class ExtendBokeh(object):
         # toolbar_location options are 'above', 'right', 'left', 'below'
         save(gp)
 
+    @staticmethod
+    def show_data_table(data_table,
+                        html_output_file,
+                        html_output_file_title):
+
+        output_file(html_output_file, title=html_output_file_title)
+        show(widgetbox(data_table))
 
 
 def make_histogram_plot(title,
