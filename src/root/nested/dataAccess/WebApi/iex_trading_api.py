@@ -1,3 +1,4 @@
+import os, math
 import requests
 import pandas as pd
 import pyEX as pyex
@@ -107,15 +108,40 @@ class IEXTradingApi:
     def format_headline(self,
                         headline):
 
-        return (headline)
+        cell_color = "white"
+        if isinstance(headline, float) is True and math.isnan(headline):
+            self.logger.info("IEXTradingApi.format_headline(): headline is null, %s", headline)
+            headline = " "
+        # create a meta_dict for color based on the appearance of the words "beats" and "misses"
+        beats_occurences = len([i for i in range(len(headline)) if headline.startswith('beats', i)])
+        misses_occurrences = len([i for i in range(len(headline)) if headline.startswith('misses', i)])
+        if misses_occurrences == 0 and beats_occurences != 0:
+            cell_color = 'green'
+        elif misses_occurrences != 0 and beats_occurences != 0:
+            cell_color = 'orange'
+        elif beats_occurences == 0 and misses_occurrences != 0:
+            cell_color = 'red'
+        return headline, cell_color
 
-    def co_earnings_today(self):
+    def co_earnings_today(self,
+                          today_ymd=None):
 
         from datetime import datetime
-        today_ymd = datetime.now().strftime("%Y%m%d")
-        df = pyex.earningsTodayDF()
-
-        if df.empty is True:
+        try_local_pull = False
+        if today_ymd is None:
+            today_ymd = datetime.now().strftime("%Y%m%d")
+            df = pyex.earningsTodayDF()
+            if df.empty is True and os.path.isfile(self.co_earnings_path + today_ymd + ".csv") is True:
+                try_local_pull = True
+            elif df.empty is True:
+                self.logger.info("IEXTradingApi:co_earnings_today().: no earnings for date %s!", today_ymd)
+                return
+        elif os.path.isfile(self.co_earnings_path + today_ymd + ".csv") is False:
+          self.logger.info("IEXTradingApi:co_earnings_today(): no historical file available for date %s", today_ymd)
+          return
+        else:
+            try_local_pull = True
+        if try_local_pull is True:
             # check for an existing flat csv file, maybe we did a pull already
             df = pd.read_csv(self.co_earnings_path + today_ymd + ".csv", sep=',', header=0)
             df.set_index('symbol', inplace=True)
@@ -123,21 +149,38 @@ class IEXTradingApi:
         else:
             df.to_csv(self.co_earnings_path + today_ymd + ".csv", sep=',')
             df.reset_index(inplace=True)
-
         market_cap_billions = df['quote.marketCap'].astype('float64')/1000000000.0
         market_cap_billions = market_cap_billions.round(3)
-        df['Market Cap'] = market_cap_billions.apply(lambda x: self.format_market_cap(x) )
-        df['Report Date'] = df['EPSReportDate'].astype('str')
-        df['Announce Time'] = df['announceTime'].apply(lambda x: self.format_announce_time(x))
-        df['Consensus EPS'] = df['consensusEPS']
-        df['Estimated 1-Yr Change, EPS'] = df['estimatedChangePercent'].mul(100).round(2).astype('str') + '%'
-        df['EPS Estimate'] = '$' + df['estimatedEPS'].astype('str')
-        df['Quarter End'] = df['fiscalEndDate'].astype('str')
-        df['Quarter'] = df['fiscalPeriod']
-        df['Headline'] = df['headline'].apply(lambda x: self.format_headline(x))
-        df['# of Estimates'] = df['numberOfEstimates'].apply
-
-        list_of_columns = [ 'symbol',
+        df['quote.marketCap'] = market_cap_billions.apply(lambda x: self.format_market_cap(x) )
+        df.EPSReportDate = df.EPSReportDate.astype('str')
+        df.announceTime = df.announceTime.apply(lambda x: self.format_announce_time(x))
+        df.estimatedChangePercent = df.estimatedChangePercent.mul(100).round(2).astype('str') + '%'
+        df.estimatedEPS = '$' + df.estimatedEPS.astype('str')
+        df.fiscalEndDate = df.fiscalEndDate.astype('str')
+        df.headline = df.headline.apply(lambda x: self.format_headline(x))
+        df[['headline', 'headline_color']] = df.headline.apply(pd.Series)
+        df.week52High = '$' + df['quote.week52High'].astype('str')
+        df.week52Low = '$' + df['quote.week52Low'].astype('str')
+        df['quote.ytdChange'] = df['quote.ytdChange'].mul(100).round(2).astype('str') + '%'
+        df.rename(index=str, columns={"symbol": "Symbol",
+                                      "quote.peRatio": "P/E Ratio",
+                                      "fiscalPeriod": "Quarter",
+                                      "numberOfEstimates": "# of Estimates",
+                                      "consensusEPS": "Consensus EPS",
+                                      "headline": "Headline",
+                                      "fiscalEndDate": "Quarter End",
+                                      "estimatedEPS": "EPS Estimate",
+                                      "estimatedChangePercent": "Estimated 1-Yr Change, EPS",
+                                      "announceTime": "Announce Time",
+                                      "EPSReportDate": "Report Date",
+                                      "quote.marketCap": "Market Cap",
+                                      "quote.peRatio": "P/E Ratio",
+                                      "quote.sector": "Sector",
+                                      "quote.week52High": "52-Week High",
+                                      "quote.week52Low": "52-Week Low",
+                                      "quote.ytdChange": "YTD Change",
+                                      "yearAgo": "Year Ago EPS"}, inplace = True)
+        list_of_columns = [ 'Symbol',
                             'Report Date',
                             'Announce Time',
                             'Consensus EPS',
@@ -146,25 +189,26 @@ class IEXTradingApi:
                             'Quarter End',
                             'Quarter',
                             'Headline',
-                            'numberOfEstimates',
+                            'headline_color',
+                            '# of Estimates',
                             'Market Cap',
-                            'quote.open',
-                            'quote.peRatio',
-                            'quote.sector',
-                            'quote.week52High',
-                            'quote.week52Low',
-                            'quote.ytdChange',
-                            'yearAgo']
+                            'P/E Ratio',
+                            'Sector',
+                            '52-Week High',
+                            '52-Week Low',
+                            'YTD Change',
+                            'Year Ago EPS']
         df = df[list_of_columns]
         output_html_filename = self.iex_html_path + 'co_earnings_' + today_ymd + '.html'
-        data_table = ExtendBokeh.bokeh_data_table(dataframe=df)
-        ExtendBokeh.show_data_table(data_table,
-                                    html_output_file=output_html_filename,
-                                    html_output_file_title='CoEarningsToday')
+        data_table = ExtendBokeh.bokeh_co_earnings_today_datatable(dataframe=df)
+        ExtendBokeh.show_co_earnings_today_data_table(data_table,
+                                                      html_output_file=output_html_filename,
+                                                      html_output_file_title='CoEarningsToday')
 
 
 if __name__ == '__main__':
 
+    from datetime import timedelta, datetime
     iextapi = IEXTradingApi()
     #iextapi.get_co_sector('AAPL')
     #iextapi.get_co_peers('AAPL')
@@ -183,7 +227,11 @@ if __name__ == '__main__':
     #df.set_index('symbol', inplace = True)
     #print(df.loc['SPY'])
 
-    iextapi.co_earnings_today()
+    #today_ymd = datetime.now().strftime("%Y%m%d")
+    today_ymd = datetime.now() - timedelta(days = 0)
+    today_ymd = today_ymd.strftime("%Y%m%d")
+
+    iextapi.co_earnings_today(today_ymd=today_ymd)
 
     #print (df.info())
 

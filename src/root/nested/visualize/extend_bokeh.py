@@ -1,11 +1,17 @@
 from bokeh.plotting import figure, ColumnDataSource
 from bokeh.io import output_file, show, save
 from bokeh.layouts import row, column, gridplot, widgetbox
-from bokeh.models.widgets import Panel, Tabs, DataTable, DateFormatter, TableColumn
+from bokeh.models.widgets import Panel, Tabs, DataTable, DateFormatter, TableColumn, StringFormatter, \
+    HTMLTemplateFormatter
 from bokeh.models import HoverTool, Title, BoxAnnotation, Span, Range1d
 from bokeh.models import CategoricalColorMapper, Band, ColumnDataSource
 from bokeh.models.axes import LinearAxis
 from bokeh.core.properties import value
+
+#from bokeh.models.widgets import (
+#    Select, StringFormatter,
+#    NumberFormatter, StringEditor, IntEditor, NumberEditor, SelectEditor)
+
 import numpy as np
 import pandas as pd
 import scipy as sp
@@ -259,11 +265,35 @@ class ExtendBokeh(object):
         show(figure_obj)
 
     @staticmethod
-    def bokeh_data_table(dataframe):
+    def bokeh_co_earnings_today_datatable(dataframe,
+                                          meta_dict=None):
 
         source = ColumnDataSource(dataframe)
-        columns = [TableColumn(field=col_nm, title=col_nm) for col_nm in dataframe.columns]
-        data_table = DataTable(source=source, columns = columns, width=1600, height = 800)
+        #template_orig = """
+        #        <div style="font-weight:bold; background:<%=headline_color%>;
+        #        word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">
+        #        <%= value%></div>
+        #        """
+        """Reference for the below html: https://stackoverflow.com/questions/2015667/
+        how-do-i-set-span-background-color-so-it-colors-the-background-throughout-the-li
+        Also see: https://stackoverflow.com/questions/10217915/span-inside-div-prevents-text-overflowellipsis
+        """
+        template = """
+                    <div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; max-width:1000px; background-color:<%=headline_color%>;>
+                    <span style="overflow:hidden; text-overflow:ellipsis; max-width:1000px"; href="#" data-toggle="tooltip" title="<%= value %>"><%= value %>
+                    </span></div >
+                    """
+        html_formatter = HTMLTemplateFormatter(template=template)
+        columns = [TableColumn(field=col_nm, title=col_nm, width=1000) for col_nm in dataframe.columns]
+        # Hack: Headline column width needs to be larger than the others.
+        columns[8].width = 2500
+        # Hack: Estimated 1 Year Change, EPS needs to be larger than the others.
+        columns[4].width = 2500
+        #columns[8].formatter = StringFormatter(font_style = "bold")
+        columns[8].formatter = html_formatter
+        del columns[9] # remove the colors columns, we don't want to display it.
+        data_table = DataTable(source=source, columns = columns, width=1600, height = 800)#, fit_columns=True)
+
         return data_table
 
     @staticmethod
@@ -574,9 +604,9 @@ class ExtendBokeh(object):
         save(gp)
 
     @staticmethod
-    def show_data_table(data_table,
-                        html_output_file,
-                        html_output_file_title):
+    def show_co_earnings_today_data_table(data_table,
+                                          html_output_file,
+                                          html_output_file_title):
 
         output_file(html_output_file, title=html_output_file_title)
         show(widgetbox(data_table))

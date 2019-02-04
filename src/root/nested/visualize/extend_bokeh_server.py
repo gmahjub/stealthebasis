@@ -12,8 +12,9 @@ from bokeh.models import (
 )
 from bokeh.models.widgets import (
     Button, TableColumn, DataTable,
-    DateEditor, DateFormatter, IntEditor)
+    DateEditor, DateFormatter, HTMLTemplateFormatter, IntEditor)
 from bokeh.models.layouts import WidgetBox, Column
+from bokeh.layouts import layout
 
 document = Document()
 session = push_session(document)
@@ -60,11 +61,26 @@ def click_handler():
 
 
 def make_layout():
+    import pandas as pd
     plot, source = make_plot()
+    template = """<span href="#" data-toggle="tooltip"  title="<%= value %>"><%= value %></span>"""
     columns = [
         TableColumn(field="dates", title="Date", editor=DateEditor(), formatter=DateFormatter()),
         TableColumn(field="downloads", title="Downloads", editor=IntEditor()),
     ]
+
+    df = pd.DataFrame([
+        ['this is a longer text that needs a tooltip, because otherwise we do not see the whole text',
+         'this is a short text'],
+        ['this is another loooooooooooooooong text that needs a tooltip', 'not much here'],
+    ], columns=['a', 'b'])
+    columns = [TableColumn(field=c, title=c, width=20, formatter=HTMLTemplateFormatter(template=template))
+               for c in ['a', 'b']]
+    source = ColumnDataSource(data=df)
+    data_table = DataTable(source=source, columns = columns)
+    l = layout([[data_table]])
+    return l
+
     data_table = DataTable(source=source, columns=columns, width=400, height=400, editable=True)
     button = Button(label="Randomize data", button_type="success")
     button.on_click(click_handler)
