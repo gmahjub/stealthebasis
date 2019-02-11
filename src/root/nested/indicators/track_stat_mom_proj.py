@@ -109,6 +109,18 @@ class TrackStatMomProj:
         return return_val_from_vectorized
 
     @staticmethod
+    def autocorrelation_analysis(px_df,
+                                 sample_period='W',
+                                 how='last'):
+        # stock prices tend to me postively autocorrelated in the long term ('monthly'),
+        # yet negatively correlation in the short term ('weekly')
+        # px should be a dataframe of prices, or a pd.Series of prices
+        resampled_px_df=px_df.resample(sample_period, how=how )
+        px_rets=resampled_px_df.pct_change()
+        autocorrelation=px_rets[1:].autocorr()
+        return autocorrelation
+
+    @staticmethod
     def outlier_analysis(px_rets):
 
         no_outliers_non_norm = \

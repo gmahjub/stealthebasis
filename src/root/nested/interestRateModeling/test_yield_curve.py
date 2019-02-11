@@ -4,10 +4,8 @@ Created on Dec 19, 2017
 @author: ghazy
 '''
 
-from quandl_data_object import QuandlDataObject
-#from root.nested.quandl_data_object import QuandlDataObject
-from interest_rates import HeathJarrowMortonModel
-#from root.nested.interest_rates import HeathJarrowMortonModel
+from root.nested.dataAccess.quandl_data_object import QuandlDataObject
+from root.nested.interestRateModeling.interest_rates import HeathJarrowMortonModel
 
 import pandas as pd
 import statsmodels.tsa.api as smt

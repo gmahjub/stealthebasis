@@ -5,10 +5,8 @@ Created on Nov 21, 2017
 '''
 
 import requests
-from dataAccess.data_object import DataObject
-#from root.nested.data_object import DataObject
-from SysOs.os_mux import OSMuxImpl
-#from root.nested.os_mux import OSMuxImpl
+from root.nested.dataAccess.data_object import DataObject
+from root.nested.SysOs.os_mux import OSMuxImpl
 from root.nested import get_logger
 
 class QuandlSymbolInterface(object):
@@ -17,6 +15,14 @@ class QuandlSymbolInterface(object):
                  new_symbols_dict=None):
         
         self.logger = get_logger()
+
+        self.wilshire_tr_index_dict = {'Wilshire US Large-Cap Total Market Index': 'WILLLRGCAP'}
+        self.baml_tr_fi_index_dict = {'ICE BofAML US High Yield Master II Total Return Index Value': 'BAMLHYH0A0HYM2TRIV',
+                                      }
+        #reference: https://fred.stlouisfed.org/categories/32413
+        self.baml_tr_fi_category_id = 32413
+        # reference: https: // fred.stlouisfed.org / categories / 32255
+        self.stock_market_indexes = 32255
 
         self.to_usd_sym_dict = {'AUD_USD_spot' : 'BOE/XUDLADD', # aussie dollar
                                 'CAD_USD_spot' : 'BOE/XUDLCDD', # canadian dollar
@@ -103,7 +109,6 @@ class QuandlSymbolInterface(object):
                                      }
 
         self.quandl_ECONOMIC_INDICATORS_SEAS_ADJ_symbols_dict = {
-                                                
                                                 'US_REAL_DPI_ANNUAL_RATE_SEAS_ADJ':'FRED/DSPIC96',
                                                 'US_PPI_FD_SEAS_ADJ': 'FRED/PPIFIS',
                                                 'US_PPI_FD_GOODS_SEAS_ADJ': 'FRED/PPIDGS',
@@ -117,7 +122,6 @@ class QuandlSymbolInterface(object):
                                                 'US_AVG_WEEKLY_HOURS_SEAS_ADJ': 'FRED/AWHAETP',
                                                 'US_AVG_WEEKLY_EARNINGS_SEAS_ADJ':'FRED/CES0500000003',
                                                 'US_WEEKLY_JOBLESS_CLAIMS_SEAS_ADJ':'FRED/ICSA',
-                                                
                                                 'US_ECOMMERCE_RETAIL_SALES_PCT_TOTAL_SALES_QRTLY_SEAS_ADJ':'FRED/ECOMPCTSA',
                                                 'US_RETAIL_SALES_RETAIL_EXCLUDING_FOOD_SERVICES_SEAS_ADJ':'FRED/FSXFS',
                                                 'US_RETAIL_ECOMMERCE_SALES_SEAS_ADJ':'FRED/ECOMSA',

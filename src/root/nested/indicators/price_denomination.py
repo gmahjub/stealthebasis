@@ -1,8 +1,8 @@
 import pandas as pd
 
-from yahoo_data_object import YahooDataObject
-from tiingo_data_object import TiingoDataObject
-from quandl_data_object import QuandlDataObject
+from root.nested.dataAccess.yahoo_data_object import YahooDataObject
+from root.nested.dataAccess.tiingo_data_object import TiingoDataObject
+from root.nested.dataAccess.quandl_data_object import QuandlDataObject
 
 from root.nested import get_logger
 
@@ -38,6 +38,17 @@ class PriceDenomination(object):
         fx_px_df = fx_obj.get_df()
         
         return (fx_px_df)
+
+    def get_index_px(self,
+                     data_class,
+                     local_symbol,
+                     file_type):
+
+        index_obj = QuandlDataObject(class_of_data = data_class,
+                                     local_symbol=local_symbol,
+                                     local_file_type=file_type)
+        idx_px_df = index_obj.get_df()
+
 
     def get_common_dates_df(self,
                             stock_px_df,

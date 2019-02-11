@@ -4,18 +4,16 @@ Created on Dec 1, 2017
 @author: traderghazy
 '''
 
-import os
-from root import nested
-from quandl_interface import QuandlSymbolInterface
-from data_object import DataObject
+from root.nested.dataAccess.quandl_interface import QuandlSymbolInterface
+from root.nested.dataAccess.data_object import DataObject
+from root.nested.SysOs.os_mux import OSMuxImpl
 
+import os
 import numpy as np
 import pandas as pd
-
 import quandl
 from datetime import datetime
 
-from os_mux import OSMuxImpl
 
 class QuandlDataObject(DataObject):
     
@@ -185,8 +183,6 @@ class QuandlDataObject(DataObject):
         self.get_last_date_in_file()
         todays_date = np.datetime64('now')
         todays_date = todays_date.astype('datetime64[D]')
-        print (type(todays_date))
-        print (type(self.get_last_time_file_modified()))
         self.logger.info('QuandlDataObject.is_local_file_old(): Filename: %s Today: %s Last Modification Date %s', str(self.local_data_file_name), str(todays_date), str(self.last_time_file_modified))
         a=True
         try:
@@ -210,6 +206,10 @@ def custom_resampler(array_like):
 
 
 if __name__ == '__main__':
+
+    qdo_eurodollar = QuandlDataObject('EURODOLLARS',
+                                      'ED4_WHITE',
+                                      '.csv')
     
     qdo_euro = QuandlDataObject('FOREX_TO_USD',
                                 'EUR_USD_spot',
