@@ -128,7 +128,7 @@ class IEXTradingApi:
 
         from datetime import datetime
         try_local_pull = False
-        if today_ymd is None:
+        if today_ymd is None or today_ymd == datetime.now().strftime("%Y%m%d"):
             today_ymd = datetime.now().strftime("%Y%m%d")
             df = pyex.earningsTodayDF()
             if df.empty is True and os.path.isfile(self.co_earnings_path + today_ymd + ".csv") is True:
@@ -159,8 +159,8 @@ class IEXTradingApi:
         df.fiscalEndDate = df.fiscalEndDate.astype('str')
         df.headline = df.headline.apply(lambda x: self.format_headline(x))
         df[['headline', 'headline_color']] = df.headline.apply(pd.Series)
-        df.week52High = '$' + df['quote.week52High'].astype('str')
-        df.week52Low = '$' + df['quote.week52Low'].astype('str')
+        df["quote.week52High"] = '$' + df['quote.week52High'].astype('str')
+        df["quote.week52Low"] = '$' + df['quote.week52Low'].astype('str')
         df['quote.ytdChange'] = df['quote.ytdChange'].mul(100).round(2).astype('str') + '%'
         df.rename(index=str, columns={"symbol": "Symbol",
                                       "quote.peRatio": "P/E Ratio",
