@@ -156,7 +156,7 @@ class FredApi:
                                       observation_start='2014-06-01',
                                       observation_end=pd.datetime.now().strftime('%Y-%m-%d'),
                                       which_lag=1,
-                                      rolling_window_size=60):
+                                      rolling_window_size=80):
 
         # default window size is one week,there are two observations per day.
         qdo_eurodollar = QuandlDataObject(ir_class,
@@ -188,7 +188,7 @@ class FredApi:
         #ed_df['SettleLastDelta'].rolling(rolling_window_size).sum().div(0.005).\
         #    plot(title="Cummulative Sum Settle-Last", color='orange')
         #temp.rolling(rolling_window_size).sum().div(0.005).plot(color='purple')
-        ed_df['rolling_reversion_trade_pnl'] = ed_df.SettleLastTradeSelect.rolling(rolling_window_size).\
+        ed_df['rolling_reversion_trade_pnl'] = ed_df.SettleLastTradeSelect.rolling(60).\
             sum().div(0.005)
         ed_df['fwd_looking_rolling_reversion_trade_pnl'] = ed_df.rolling_reversion_trade_pnl.\
             shift(-1*rolling_window_size)
@@ -202,18 +202,19 @@ class FredApi:
         #pairplot = sns.pairplot(data = ed_df[['corr_series', 'fwd_looking_rolling_reversion_trade_pnl']].dropna())
         #pairplot.fig.savefig(self.seaborn_plots_pwd + pairplot_save_filename)
         #plt.show()
-        p_scat_1, p_scat_2, p_scat_3 = ExtendBokeh.bokeh_ed_ir_rolling_ticks_correl(data,
+        p_scat_1, p_scat_2, p_scat_3, p_correl_line = ExtendBokeh.bokeh_ed_ir_rolling_ticks_correl(data,
                                                              title=['ED/IR Rolling Cum. Sum vs. Correl',
                                                                     'ED/IR Rolling Fwd Cum. Sum vs. Correl',
-                                                                    'ED/IR Point Value vs. Correl'],
-                                                             subtitle=['', '', ''],
+                                                                    'ED/IR Point Value vs. Correl',
+                                                                    'Correlation vs. Datetime'],
+                                                             subtitle=['', '', '', ''],
                                                              type_list=['rolling_reversion_trade_pnl',
                                                                         'fwd_looking_rolling_reversion_trade_pnl',
                                                                         'SettleLastTradeSelect',
                                                                         'corr_series'],
                                                              rolling_window_size=rolling_window_size,
-                                                             correl_filter=(-0.000001, 0.000001))
-        the_plots = [p_scat_1, p_scat_2, p_scat_3]
+                                                             correl_filter=(-0.4, 0.4))
+        the_plots = [p_scat_1, p_scat_2, p_scat_3, p_correl_line]
         html_output_file_path = OSMuxImpl.get_proper_path('/workspace/data/bokeh/html/')
         html_output_file_title = ir_class + '_' + contract + ".scatter.html"
         html_output_file = html_output_file_path + html_output_file_title

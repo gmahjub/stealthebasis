@@ -461,6 +461,7 @@ class ExtendBokeh(object):
                                          rolling_window_size=30,
                                          correl_filter=(-0.0000001, 0.0000001)):
 
+        data["x_coord"] = pd.to_datetime(data.index)
         p_scat_1 = figure(plot_width=600, plot_height=400)
         p_scat_1.add_layout(Title(text=subtitle[0], text_font_style="italic"), place='above')
         p_scat_1.add_layout(Title(text=title[0], text_font_size="14pt"), place='above')
@@ -472,6 +473,10 @@ class ExtendBokeh(object):
         p_scat_3 = figure(plot_width=600, plot_height=400)
         p_scat_3.add_layout(Title(text=subtitle[2], text_font_style="italic"), place='above')
         p_scat_3.add_layout(Title(text=title[2], text_font_size="14pt"), place='above')
+
+        p_line_correl = figure(plot_width=600, plot_height=400, x_axis_type='datetime')
+        p_line_correl.add_layout(Title(text=subtitle[3], text_font_style="italic"), place='above')
+        p_line_correl.add_layout(Title(text=title[3], text_font_size="14pt"), place='above')
         """
         type_list = ['rolling_reversion_trade_pnl',
                      'fwd_looking_rolling_reversion_trade_pnl',
@@ -480,19 +485,19 @@ class ExtendBokeh(object):
         
         """
         scatter_source = ColumnDataSource(data)
+        p_line_correl.line(x="x_coord", y="corr_series", color='blue', alpha=0.5, source=scatter_source, legend='Correlation')
         filtered_data = data
         if correl_filter is not None:
             filtered_data = data[data[type_list[3]] < correl_filter[0]]
             filtered_data=pd.concat([filtered_data, data[data[type_list[3]] > correl_filter[1]]])
             scatter_source = ColumnDataSource(filtered_data)
-
+        # scatter plots
         p_scat_1.scatter(x=type_list[3], y=type_list[0], line_color=None, size=5,
                          source=scatter_source, legend=value(type_list[0]))
         p_scat_2.scatter(x=type_list[3], y=type_list[1], line_color=None, size=5,
                          source=scatter_source, legend=value(type_list[1]))
         p_scat_3.scatter(x=type_list[3], y=type_list[2], line_color=None, size=5,
                          source=scatter_source, legend=value(type_list[2]))
-
         # regression line
         regression_1 = np.polyfit(filtered_data[type_list[3]],
                                   filtered_data[type_list[0]], 1)
@@ -500,29 +505,32 @@ class ExtendBokeh(object):
                                   filtered_data[type_list[1]], 1)
         regression_3 = np.polyfit(filtered_data[type_list[3]],
                                   filtered_data[type_list[2]], 1)
-
+        # min/max x-axis
         min_val = data[type_list[3]].min()
         max_val = data[type_list[3]].max()
-
+        # regression lines
         # r_x, r_y = zip(*((i, i*regression[0] + regression[1]) for i in range(min_val, max_val)))
         r_x = np.linspace(start=min_val, stop=max_val, num=len(data))
         r_y_1 = r_x*regression_1[0] + regression_1[1]
         r_y_2 = r_x*regression_2[0] + regression_2[1]
         r_y_3 = r_x*regression_3[0] + regression_3[1]
-
+        # legend and plot regression line
         p_scat_1.line(x=r_x, y=r_y_1, color = 'red')
         p_scat_1.legend.location = "top_left"
         p_scat_1.legend.background_fill_color = "#fefefe"
-
+        # legend and plot regression line
         p_scat_2.line(x=r_x, y=r_y_2, color = 'red')
         p_scat_2.legend.location = "top_left"
         p_scat_2.legend.background_fill_color = "#fefefe"
-
+        # legend and plot regression line
         p_scat_3.line(x=r_x, y=r_y_3, color='red')
         p_scat_3.legend.location = "top_left"
         p_scat_3.legend.background_fill_color = "#fefefe"
-
-        return p_scat_1, p_scat_2, p_scat_3
+        # legend and plot correlation line
+        p_line_correl.legend.location = "top_left"
+        p_line_correl.legend.background_fill_color = "#fefefe"
+        # return the figures
+        return p_scat_1, p_scat_2, p_scat_3, p_line_correl
 
 
     @staticmethod

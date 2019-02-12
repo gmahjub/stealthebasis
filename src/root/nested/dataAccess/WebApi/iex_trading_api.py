@@ -140,6 +140,7 @@ class IEXTradingApi:
           self.logger.info("IEXTradingApi:co_earnings_today(): no historical file available for date %s", today_ymd)
           return
         else:
+            self.logger.warning("IEXTradingApi:co_earnings_today(): try_local_pull is True, nothing at IEX!!!")
             try_local_pull = True
         if try_local_pull is True:
             # check for an existing flat csv file, maybe we did a pull already
