@@ -15,6 +15,7 @@ from bokeh.core.properties import value
 import numpy as np
 import pandas as pd
 import scipy as sp
+import operator
 from scipy import stats
 
 from root.nested.statisticalAnalysis.hacker_stats import HackerStats
@@ -459,7 +460,7 @@ class ExtendBokeh(object):
                                          title=['ED/IR Rolling Cum. Sum vs. Correl'],
                                          subtitle=[''],
                                          rolling_window_size=30,
-                                         correl_filter=(-0.0000001, 0.0000001)):
+                                         correl_filter=None):
 
         data["x_coord"] = pd.to_datetime(data.index)
         p_scat_1 = figure(plot_width=600, plot_height=400)
@@ -481,15 +482,19 @@ class ExtendBokeh(object):
         type_list = ['rolling_reversion_trade_pnl',
                      'fwd_looking_rolling_reversion_trade_pnl',
                      'SettleLastTradeSelect',
-                     'corr_series']
+                     'lagged_corr_series']
         
         """
         scatter_source = ColumnDataSource(data)
-        p_line_correl.line(x="x_coord", y="corr_series", color='blue', alpha=0.5, source=scatter_source, legend='Correlation')
+        p_line_correl.line(x="x_coord", y="lagged_corr_series", color='blue', alpha=0.5, source=scatter_source, legend='Correlation')
         filtered_data = data
         if correl_filter is not None:
-            filtered_data = data[data[type_list[3]] < correl_filter[0]]
-            filtered_data=pd.concat([filtered_data, data[data[type_list[3]] > correl_filter[1]]])
+            filtered_data = data[correl_filter[2](correl_filter[0][0](data[type_list[3]], correl_filter[0][1]),
+                                                 correl_filter[1][0](data[type_list[3]], correl_filter[1][1]))]
+            #filtered_data = data[data[type_list[3]] > correl_filter[0]]
+            #filtered_data_2 = data[correl_filter[1][0](data[type_list[3]], correl_filter[1][1])]
+            #filtered_data = pd.concat([filtered_data_1, filtered_data_2])
+            #filtered_data=pd.concat([filtered_data, data[data[type_list[3]] > correl_filter[1]]])
             scatter_source = ColumnDataSource(filtered_data)
         # scatter plots
         p_scat_1.scatter(x=type_list[3], y=type_list[0], line_color=None, size=5,
@@ -509,7 +514,6 @@ class ExtendBokeh(object):
         min_val = data[type_list[3]].min()
         max_val = data[type_list[3]].max()
         # regression lines
-        # r_x, r_y = zip(*((i, i*regression[0] + regression[1]) for i in range(min_val, max_val)))
         r_x = np.linspace(start=min_val, stop=max_val, num=len(data))
         r_y_1 = r_x*regression_1[0] + regression_1[1]
         r_y_2 = r_x*regression_2[0] + regression_2[1]

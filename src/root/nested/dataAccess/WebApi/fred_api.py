@@ -8,6 +8,7 @@ sns.set(style='ticks')
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import operator
 from fredapi import Fred
 import statsmodels.api as sm
 from statsmodels.tsa.stattools import acf
@@ -156,7 +157,8 @@ class FredApi:
                                       observation_start='2014-06-01',
                                       observation_end=pd.datetime.now().strftime('%Y-%m-%d'),
                                       which_lag=1,
-                                      rolling_window_size=80):
+                                      rolling_window_size=30,
+                                      rolling_pnl_window_size=30):
 
         # default window size is one week,there are two observations per day.
         qdo_eurodollar = QuandlDataObject(ir_class,
@@ -173,35 +175,15 @@ class FredApi:
         conditions = [(ed_df.OpenSettleDelta.mul(100.0) > 0.0 ),
                       (ed_df.OpenSettleDelta.mul(100.0) < 0.0)]
         choices = [ed_df.SettleLastDelta.mul(-1.0), ed_df.SettleLastDelta]
-        #choices = [ed_df.SettleLastDelta*-1.0, ed_df.SettleLastDelta]
         ed_df['SettleLastTradeSelect'] = np.select(conditions, choices, default=0.0)
-        print (ed_df[['OpenSettleDelta', 'SettleLastDelta', 'SettleLastTradeSelect']].tail(20))
-        temp = ed_df['OpenSettleDelta'] - ed_df['SettleLastDelta']
-        corr_series = ed_df[['OpenSettleDelta', 'SettleLastDelta', 'LastNextOpenDelta']].\
-            rolling(window=rolling_window_size).corr(pairwise=True)
-        corr_series = ed_df[['OpenSettleDelta', 'SettleLastDelta']].\
-            rolling(window=rolling_window_size).corr(pairwise=False)
         ed_df['corr_series'] = ed_df.OpenSettleDelta.rolling(rolling_window_size).corr(ed_df.SettleLastDelta)
-        ed_df.corr_series.mul(100.0).plot(title='Correlation Open-Settle vs. Settle-Last Eurodollar Price Delta')
-        #ed_df['OpenSettleDelta'].rolling(rolling_window_size).sum().div(0.005).\
-        #    plot(color='red')
-        #ed_df['SettleLastDelta'].rolling(rolling_window_size).sum().div(0.005).\
-        #    plot(title="Cummulative Sum Settle-Last", color='orange')
-        #temp.rolling(rolling_window_size).sum().div(0.005).plot(color='purple')
-        ed_df['rolling_reversion_trade_pnl'] = ed_df.SettleLastTradeSelect.rolling(60).\
+        ed_df['rolling_reversion_trade_pnl'] = ed_df.SettleLastTradeSelect.rolling(rolling_pnl_window_size).\
             sum().div(0.005)
         ed_df['fwd_looking_rolling_reversion_trade_pnl'] = ed_df.rolling_reversion_trade_pnl.\
-            shift(-1*rolling_window_size)
-        #ed_df.rolling_reversion_trade_pnl.plot(color='red')
-        #plt.show()
-
-        print (ed_df[['corr_series', 'rolling_reversion_trade_pnl',
-                      'fwd_looking_rolling_reversion_trade_pnl']].head(20))
-        data = ed_df[['corr_series', 'SettleLastTradeSelect', 'rolling_reversion_trade_pnl',
+            shift(-1*rolling_pnl_window_size)
+        ed_df['lagged_corr_series'] = ed_df.corr_series.shift(periods=1)
+        data = ed_df[['lagged_corr_series', 'SettleLastTradeSelect', 'rolling_reversion_trade_pnl',
                       'fwd_looking_rolling_reversion_trade_pnl']].dropna()
-        #pairplot = sns.pairplot(data = ed_df[['corr_series', 'fwd_looking_rolling_reversion_trade_pnl']].dropna())
-        #pairplot.fig.savefig(self.seaborn_plots_pwd + pairplot_save_filename)
-        #plt.show()
         p_scat_1, p_scat_2, p_scat_3, p_correl_line = ExtendBokeh.bokeh_ed_ir_rolling_ticks_correl(data,
                                                              title=['ED/IR Rolling Cum. Sum vs. Correl',
                                                                     'ED/IR Rolling Fwd Cum. Sum vs. Correl',
@@ -211,9 +193,11 @@ class FredApi:
                                                              type_list=['rolling_reversion_trade_pnl',
                                                                         'fwd_looking_rolling_reversion_trade_pnl',
                                                                         'SettleLastTradeSelect',
-                                                                        'corr_series'],
+                                                                        'lagged_corr_series'],
                                                              rolling_window_size=rolling_window_size,
-                                                             correl_filter=(-0.4, 0.4))
+                                                             correl_filter=[(operator.gt, -1.0),
+                                                                            (operator.lt, 0.0),
+                                                                            operator.and_])
         the_plots = [p_scat_1, p_scat_2, p_scat_3, p_correl_line]
         html_output_file_path = OSMuxImpl.get_proper_path('/workspace/data/bokeh/html/')
         html_output_file_title = ir_class + '_' + contract + ".scatter.html"
