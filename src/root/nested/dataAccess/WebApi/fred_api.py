@@ -151,6 +151,26 @@ class FredApi:
         # last - open pairs. And the autocorrelaiton is negative, which means there is some
         # reversion.
 
+    def rolling_eurodollar_session_corr_pos_ind(self,
+                                                row,
+                                                correl_filter,
+                                                rolling_window_size,
+                                                num_rows):
+
+        #bool_val = correl_filter[2](correl_filter[0][0](row['lagged_corr_series'], correl_filter[0][1]),
+        #                            correl_filter[1][0](row['lagged_corr_series'], correl_filter[1][1]))
+        if np.isnan(row['lagged_corr_series']):
+            return 0
+        a_cond = correl_filter[0][0](row['lagged_corr_series'], correl_filter[0][1])
+        b_cond = correl_filter[1][0](row['lagged_corr_series'], correl_filter[1][1])
+        pos_ind = 0
+        if (a_cond):# and row['SettleLastTradeSelect']*100.0 < 0.0):
+            # then we want to do the trade in the direction of the Open-Settle move
+            pos_ind = -1
+        elif (b_cond):# and row['OpenSettleDelta']*100.0 < 0.0):
+            pos_ind = 1
+        return (pos_ind)
+
     def rolling_eurodollar_os_sl_corr(self,
                                       ir_class="EURODOLLARS",
                                       contract='ED4_WHITE',
@@ -158,7 +178,7 @@ class FredApi:
                                       observation_end=pd.datetime.now().strftime('%Y-%m-%d'),
                                       which_lag=1,
                                       rolling_window_size=30,
-                                      rolling_pnl_window_size=30):
+                                      rolling_pnl_window_size=45):
 
         # default window size is one week,there are two observations per day.
         qdo_eurodollar = QuandlDataObject(ir_class,
@@ -171,19 +191,55 @@ class FredApi:
         ed_df = ed_df[ed_df.Volume > 0.0]
         ed_df['OpenSettleDelta'] = ed_df.Settle - ed_df.Open
         ed_df['SettleLastDelta'] = ed_df.Last - ed_df.Settle
+        ed_df['SettleNextOpenDelta'] = ed_df.Open.shift(periods=-which_lag) - ed_df.Settle
         ed_df['LastNextOpenDelta'] = ed_df.Open.shift(periods=-which_lag) - ed_df.Last
         conditions = [(ed_df.OpenSettleDelta.mul(100.0) > 0.0 ),
                       (ed_df.OpenSettleDelta.mul(100.0) < 0.0)]
-        choices = [ed_df.SettleLastDelta.mul(-1.0), ed_df.SettleLastDelta]
-        ed_df['SettleLastTradeSelect'] = np.select(conditions, choices, default=0.0)
+        choices_settle_last = [ed_df.SettleLastDelta.mul(-1.0), ed_df.SettleLastDelta]
+        choices_settle_nextopen = [ed_df.SettleNextOpenDelta.mul(-1.0), ed_df.SettleNextOpenDelta]
+        ed_df['SettleLastTradeSelect'] = np.select(conditions, choices_settle_last, default=0.0)
+        ed_df['SettleNextOpenTradeSelect'] = np.select(conditions, choices_settle_nextopen, default = 0.0)
         ed_df['corr_series'] = ed_df.OpenSettleDelta.rolling(rolling_window_size).corr(ed_df.SettleLastDelta)
         ed_df['rolling_reversion_trade_pnl'] = ed_df.SettleLastTradeSelect.rolling(rolling_pnl_window_size).\
             sum().div(0.005)
         ed_df['fwd_looking_rolling_reversion_trade_pnl'] = ed_df.rolling_reversion_trade_pnl.\
-            shift(-1*rolling_pnl_window_size)
+            shift(-1*rolling_pnl_window_size+1)
         ed_df['lagged_corr_series'] = ed_df.corr_series.shift(periods=1)
+        correl_filter = [(operator.gt, 0.4),
+                         (operator.lt, -0.4),
+                         operator.or_]
+        ed_df['pos_ind'] = ed_df.apply(self.rolling_eurodollar_session_corr_pos_ind,
+                                       args=(correl_filter,rolling_pnl_window_size,len(ed_df.lagged_corr_series),),
+                                       axis=1)
+
+        np_pos_ind = ed_df.pos_ind.values
+        np_array_list = [np.repeat(pos_ind, np.min([rolling_pnl_window_size,len(np_pos_ind)-item_idx]))
+                         for item_idx, pos_ind in enumerate(np_pos_ind) ]
+        final_np_array_list = [np.append(np.append(np.repeat(0, np.min([item_idx, len(np_array_list)-len(npa)])), np.array(npa)),
+                                         np.repeat(0, np.max([len(np_array_list)-(item_idx+len(npa)),0])))
+                               for item_idx, npa in enumerate(np_array_list)]
+
+        self.logger.info("FredAPI:rolling_eurodollar_os_sl_corr(): final_np_array list dimensions are %s", np.array(final_np_array_list).shape)
+        total_pos_ind = np.sum(np.array(final_np_array_list), axis=0)
+        #print (len(total_pos_ind), type(total_pos_ind))
+        ed_df['total_pos_ind'] = pd.Series(total_pos_ind, index=ed_df.index)
+        ed_df['zero_replaced_pos_ind'] = ed_df['pos_ind'].replace(to_replace=0, method='ffill')# inplace=True)
+        ed_df['FinalSettleLastTradeSelect'] = ed_df['SettleLastTradeSelect'].mul(ed_df['total_pos_ind'])
+        ed_df['FinalSettleNextOpenTradeSelect'] = ed_df['SettleNextOpenTradeSelect'].mul(ed_df['total_pos_ind'])
+        ed_df.total_pos_ind.plot()
+        plt.show()
+        ed_df.FinalSettleLastTradeSelect.cumsum().plot()
+        plt.show()
+        ed_df.FinalSettleNextOpenTradeSelect.cumsum().plot()
+        plt.show()
+        ed_df.to_csv('/Users/traderghazy/workspace/data/ed_df.csv')
+
         data = ed_df[['lagged_corr_series', 'SettleLastTradeSelect', 'rolling_reversion_trade_pnl',
                       'fwd_looking_rolling_reversion_trade_pnl']].dropna()
+        """ the correl_filter is the conditions for filtering the correlations
+            Make sure the last item in this list is either operation.and_ or operator.or_...
+            this will tell the filter how to combine the conditions.
+        """
         p_scat_1, p_scat_2, p_scat_3, p_correl_line = ExtendBokeh.bokeh_ed_ir_rolling_ticks_correl(data,
                                                              title=['ED/IR Rolling Cum. Sum vs. Correl',
                                                                     'ED/IR Rolling Fwd Cum. Sum vs. Correl',
@@ -195,9 +251,7 @@ class FredApi:
                                                                         'SettleLastTradeSelect',
                                                                         'lagged_corr_series'],
                                                              rolling_window_size=rolling_window_size,
-                                                             correl_filter=[(operator.gt, -1.0),
-                                                                            (operator.lt, 0.0),
-                                                                            operator.and_])
+                                                             correl_filter=correl_filter)
         the_plots = [p_scat_1, p_scat_2, p_scat_3, p_correl_line]
         html_output_file_path = OSMuxImpl.get_proper_path('/workspace/data/bokeh/html/')
         html_output_file_title = ir_class + '_' + contract + ".scatter.html"
@@ -304,4 +358,15 @@ if __name__ == '__main__':
     #                         y_series)
     #fred_obj.interest_rates_autocorrelation(which_lag=3)
     #fred_obj.intraday_ir_correlation(which_lag=1)
-    fred_obj.rolling_eurodollar_os_sl_corr()
+    fred_obj.rolling_eurodollar_os_sl_corr(ir_class="EURODOLLARS",
+                                           contract='ED4_WHITE')
+    """
+    rolling_eurodollar_os_sl_corr(self,
+                                  ir_class="EURODOLLARS",
+                                  contract='ED4_WHITE',
+                                  observation_start='2014-06-01',
+                                  observation_end=pd.datetime.now().strftime('%Y-%m-%d'),
+                                  which_lag=1,
+                                  rolling_window_size=20,
+                                  rolling_pnl_window_size=60):
+    """

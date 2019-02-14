@@ -491,10 +491,6 @@ class ExtendBokeh(object):
         if correl_filter is not None:
             filtered_data = data[correl_filter[2](correl_filter[0][0](data[type_list[3]], correl_filter[0][1]),
                                                  correl_filter[1][0](data[type_list[3]], correl_filter[1][1]))]
-            #filtered_data = data[data[type_list[3]] > correl_filter[0]]
-            #filtered_data_2 = data[correl_filter[1][0](data[type_list[3]], correl_filter[1][1])]
-            #filtered_data = pd.concat([filtered_data_1, filtered_data_2])
-            #filtered_data=pd.concat([filtered_data, data[data[type_list[3]] > correl_filter[1]]])
             scatter_source = ColumnDataSource(filtered_data)
         # scatter plots
         p_scat_1.scatter(x=type_list[3], y=type_list[0], line_color=None, size=5,
@@ -511,10 +507,10 @@ class ExtendBokeh(object):
         regression_3 = np.polyfit(filtered_data[type_list[3]],
                                   filtered_data[type_list[2]], 1)
         # min/max x-axis
-        min_val = data[type_list[3]].min()
-        max_val = data[type_list[3]].max()
+        min_val = filtered_data[type_list[3]].min()
+        max_val = filtered_data[type_list[3]].max()
         # regression lines
-        r_x = np.linspace(start=min_val, stop=max_val, num=len(data))
+        r_x = np.linspace(start=min_val, stop=max_val, num=len(filtered_data))
         r_y_1 = r_x*regression_1[0] + regression_1[1]
         r_y_2 = r_x*regression_2[0] + regression_2[1]
         r_y_3 = r_x*regression_3[0] + regression_3[1]
