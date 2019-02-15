@@ -177,7 +177,7 @@ class FredApi:
                                       observation_start='2014-06-01',
                                       observation_end=pd.datetime.now().strftime('%Y-%m-%d'),
                                       which_lag=1,
-                                      rolling_window_size=30,
+                                      rolling_window_size=15,
                                       rolling_pnl_window_size=45):
 
         # default window size is one week,there are two observations per day.
@@ -193,10 +193,27 @@ class FredApi:
         ed_df['SettleLastDelta'] = ed_df.Last - ed_df.Settle
         ed_df['SettleNextOpenDelta'] = ed_df.Open.shift(periods=-which_lag) - ed_df.Settle
         ed_df['LastNextOpenDelta'] = ed_df.Open.shift(periods=-which_lag) - ed_df.Last
-        conditions = [(ed_df.OpenSettleDelta.mul(100.0) > 0.0 ),
-                      (ed_df.OpenSettleDelta.mul(100.0) < 0.0)]
-        choices_settle_last = [ed_df.SettleLastDelta.mul(-1.0), ed_df.SettleLastDelta]
-        choices_settle_nextopen = [ed_df.SettleNextOpenDelta.mul(-1.0), ed_df.SettleNextOpenDelta]
+        conditions = [(pd.to_numeric(ed_df.OpenSettleDelta.mul(1000.0), downcast='integer') > 5 ), # one tick
+                      (pd.to_numeric(ed_df.OpenSettleDelta.mul(1000.0), downcast='integer') < 5)]  # one tick
+
+        settle_lastdelta_slippage_condition = [(pd.to_numeric(ed_df.SettleLastDelta.mul(100.0), downcast='integer') > 0),
+                              (pd.to_numeric(ed_df.SettleLastDelta.mul(100.0), downcast='integer') < 0)]
+        slippage_choice_settle_last = [ed_df.SettleLastDelta.add(-0.005), ed_df.SettleLastDelta.add(0.005)]
+        settle_nextopendelta_slippage_condition = [(pd.to_numeric(ed_df.SettleNextOpenDelta.mul(100.0), downcast='integer') > 0),
+                                                   (pd.to_numeric(ed_df.SettleNextOpenDelta.mul(100.0), downcast='integer') < 0)]
+        slippage_choice_settle_nextopen = [ed_df.SettleNextOpenDelta.add(-0.005), ed_df.SettleNextOpenDelta.add(0.005)]
+        settle_lastdelta_incl_slippage = np.select(settle_lastdelta_slippage_condition, slippage_choice_settle_last, default = 0.0)
+        settle_nextopen_incl_slippage = np.select(settle_nextopendelta_slippage_condition, slippage_choice_settle_nextopen, default = 0.0)
+
+        ### the way we did this will not work. The above, where we try to take into consideration slippage.
+        ### the best way is to simply subtract 1 tick from the total pnl
+        ### NOW, if we want to have a threshold for putting on the trade, thats different. If for example,
+        ### we want the Settle - Open change to be at least x number of ticks in order to do a reversion
+        ### or autocorrelation trade, then we can do that, that's fine.
+
+        #choices_settle_last = [ed_df.SettleLastDelta.mul(-1.0), ed_df.SettleLastDelta]
+        choices_settle_last = [pd.Series(settle_lastdelta_incl_slippage).mul(-1.0), pd.Series(settle_lastdelta_incl_slippage)]
+        choices_settle_nextopen = [pd.Series(settle_nextopen_incl_slippage).mul(-1.0), pd.Series(settle_nextopen_incl_slippage)]
         ed_df['SettleLastTradeSelect'] = np.select(conditions, choices_settle_last, default=0.0)
         ed_df['SettleNextOpenTradeSelect'] = np.select(conditions, choices_settle_nextopen, default = 0.0)
         ed_df['corr_series'] = ed_df.OpenSettleDelta.rolling(rolling_window_size).corr(ed_df.SettleLastDelta)
@@ -205,13 +222,12 @@ class FredApi:
         ed_df['fwd_looking_rolling_reversion_trade_pnl'] = ed_df.rolling_reversion_trade_pnl.\
             shift(-1*rolling_pnl_window_size+1)
         ed_df['lagged_corr_series'] = ed_df.corr_series.shift(periods=1)
-        correl_filter = [(operator.gt, 0.4),
-                         (operator.lt, -0.4),
+        correl_filter = [(operator.gt, 0.1),
+                         (operator.lt, -0.1),
                          operator.or_]
         ed_df['pos_ind'] = ed_df.apply(self.rolling_eurodollar_session_corr_pos_ind,
                                        args=(correl_filter,rolling_pnl_window_size,len(ed_df.lagged_corr_series),),
                                        axis=1)
-
         np_pos_ind = ed_df.pos_ind.values
         np_array_list = [np.repeat(pos_ind, np.min([rolling_pnl_window_size,len(np_pos_ind)-item_idx]))
                          for item_idx, pos_ind in enumerate(np_pos_ind) ]
