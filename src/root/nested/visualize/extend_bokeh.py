@@ -456,6 +456,7 @@ class ExtendBokeh(object):
 
     @staticmethod
     def bokeh_ed_ir_rolling_ticks_correl(data,
+                                         diff_types_to_correlate,
                                          type_list,
                                          title=['ED/IR Rolling Cum. Sum vs. Correl'],
                                          subtitle=[''],
@@ -482,15 +483,15 @@ class ExtendBokeh(object):
         type_list = ['rolling_reversion_trade_pnl',
                      'fwd_looking_rolling_reversion_trade_pnl',
                      'SettleLastTradeSelect',
-                     'lagged_corr_series']
+                     'os_sl_lagged_corr_series']
         
         """
         scatter_source = ColumnDataSource(data)
-        p_line_correl.line(x="x_coord", y="lagged_corr_series", color='blue', alpha=0.5, source=scatter_source, legend='Correlation')
+        p_line_correl.line(x="x_coord", y="os_sl_lagged_corr_series", color='blue', alpha=0.5, source=scatter_source, legend='Correlation')
         filtered_data = data
         if correl_filter is not None:
-            filtered_data = data[correl_filter[2](correl_filter[0][0](data[type_list[3]], correl_filter[0][1]),
-                                                 correl_filter[1][0](data[type_list[3]], correl_filter[1][1]))]
+            filtered_data = data[correl_filter[diff_types_to_correlate][2](correl_filter[diff_types_to_correlate][0][0](data[type_list[3]], correl_filter[diff_types_to_correlate][0][1]),
+                                                 correl_filter[diff_types_to_correlate][1][0](data[type_list[3]], correl_filter[diff_types_to_correlate][1][1]))]
             scatter_source = ColumnDataSource(filtered_data)
         # scatter plots
         p_scat_1.scatter(x=type_list[3], y=type_list[0], line_color=None, size=5,
