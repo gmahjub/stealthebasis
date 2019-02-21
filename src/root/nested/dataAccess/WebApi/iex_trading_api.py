@@ -1,4 +1,5 @@
-import os, math
+import os, math, sys
+sys.path.extend(['/Users/traderghazy/PycharmProjects/stealthebasis','/Users/traderghazy/PycharmProjects/stealthebasis/src'])
 import requests
 import pandas as pd
 import pyEX as pyex
@@ -6,6 +7,7 @@ import pyEX as pyex
 from root.nested import get_logger
 from root.nested.SysOs.os_mux import OSMuxImpl
 from root.nested.visualize.extend_bokeh import ExtendBokeh
+
 
 class IEXTradingApi:
 
@@ -202,7 +204,7 @@ class IEXTradingApi:
         df = df[list_of_columns]
         output_html_filename = self.iex_html_path + 'co_earnings_' + today_ymd + '.html'
         data_table = ExtendBokeh.bokeh_co_earnings_today_datatable(dataframe=df)
-        ExtendBokeh.show_co_earnings_today_data_table(data_table,
+        ExtendBokeh.save_co_earnings_today_data_table(data_table,
                                                       html_output_file=output_html_filename,
                                                       html_output_file_title='CoEarningsToday')
 

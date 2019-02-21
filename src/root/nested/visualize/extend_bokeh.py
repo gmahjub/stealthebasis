@@ -692,6 +692,14 @@ class ExtendBokeh(object):
         output_file(html_output_file, title=html_output_file_title)
         show(widgetbox(data_table))
 
+    @staticmethod
+    def save_co_earnings_today_data_table(data_table,
+                                          html_output_file,
+                                          html_output_file_title):
+
+        output_file(html_output_file,title=html_output_file_title)
+        save(widgetbox(data_table))
+
 
 def make_histogram_plot(title,
                         subtitle,
