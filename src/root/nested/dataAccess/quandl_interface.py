@@ -261,6 +261,8 @@ class QuandlSymbolInterface(object):
                                                 'ED23_PURPLE': 'CHRIS/CME_ED23',
                                                 'ED24_PURPLE': 'CHRIS/CME_ED24'
                                                }
+
+        self.quandl_VIX_symbols_dict = {''}
         
         self.new_symbols_dict = new_symbols_dict
         self.local_quandl_forex_data_path = '/workspace/data/quandl/forex/'
