@@ -16,7 +16,6 @@ class CboExcelApi:
         self.logger.info("the sheet names in the input xlsx file are %s", str(sheetnames))
         revenues_sheet = self.workbook.get_sheet_by_name('2. Revenues')
         outlays_sheet = self.workbook.get_sheet_by_name('3. Outlays')
-
         begin_tabledata_row_num = 0
         for cell_obj in revenues_sheet['A1':'A200']:
             for cell in cell_obj:
@@ -31,15 +30,21 @@ class CboExcelApi:
             if header_cell.value is not None:
                 clean_header_list.append(header_cell.value)
         # now, look for the next empty row to know where the table ends
-        revenues_df = pd.DataFrame(columns=clean_header_list)
+        print (begin_tabledata_row_num)
         revenue_data_dict = {}
+        revenue_perc_gdp_data_dict = {}
         for row in revenues_sheet[begin_tabledata_row_num+1:200]:
+            # ignore any row with out a year value (which is first column)
             if row[0].value is not None:
                 val_list=[]
                 for row_val in row:
                     if row_val.value is not None:
                         val_list.append(row_val.value)
+                if (row[0].value in revenue_data_dict):
+                    # we are done with the revenues ($) table, % of GDP table being read now.
+                    break
                 revenue_data_dict[row[0].value] = val_list
+
         clean_header_list.insert(0, "Year")
         revenues_df = pd.DataFrame.from_dict(revenue_data_dict,
                                              orient='index')
