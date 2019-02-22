@@ -2,20 +2,21 @@ from bokeh.plotting import figure, ColumnDataSource
 from bokeh.io import output_file, show, save
 from bokeh.layouts import row, column, gridplot, widgetbox
 from bokeh.models.widgets import Panel, Tabs, DataTable, DateFormatter, TableColumn, StringFormatter, \
-    HTMLTemplateFormatter
-from bokeh.models import HoverTool, Title, BoxAnnotation, Span, Range1d
+    HTMLTemplateFormatter, NumberFormatter, StringEditor, IntEditor, NumberEditor, SelectEditor
+from bokeh.models import HoverTool, Title, BoxAnnotation, Span, Range1d, DataRange1d, Plot, LinearAxis, \
+    Grid, Circle, Line, HoverTool, BoxSelectTool
 from bokeh.models import CategoricalColorMapper, Band, ColumnDataSource
+from bokeh.models.layouts import Column
 from bokeh.models.axes import LinearAxis
 from bokeh.core.properties import value
-
-#from bokeh.models.widgets import (
-#    Select, StringFormatter,
-#    NumberFormatter, StringEditor, IntEditor, NumberEditor, SelectEditor)
+from bokeh.document import Document
+from bokeh.embed import file_html
+from bokeh.resources import INLINE
+from bokeh.util.browser import view
 
 import numpy as np
 import pandas as pd
 import scipy as sp
-import operator
 from scipy import stats
 
 from root.nested.statisticalAnalysis.hacker_stats import HackerStats
@@ -32,6 +33,85 @@ class ExtendBokeh(object):
 
         #self.logger = get_logger()
         return super().__init__(**kwargs)
+
+    @staticmethod
+    def visualizeCbo(df):
+
+        source = ColumnDataSource(df)
+        ind_income_taxes = sorted(df["Individual\nIncome Taxes"].unique())
+        payroll_taxes = sorted(df["Payroll Taxes"].unique())
+        corporate_income_taxes = sorted(df["Corporate\nIncome Taxes"].unique())
+        excise_taxes = sorted(df["Excise Taxes"].unique())
+        estate_gift_taxes = sorted(df["Estate and\nGift Taxes"].unique())
+        customs_duties = sorted(df["Customs Duties"].unique())
+        misc_receipts = sorted(df["Miscellaneous Receipts"].unique())
+        total = sorted(df["Total"].unique())
+        #year = sorted(df["Year"].unique())
+        first_year = pd.to_numeric(df.Year).min()
+        last_year = pd.to_numeric(df.Year).max()
+
+        columns = [
+            TableColumn(field="Individual\nIncome Taxes", title="Individual Income Taxes",
+                        editor=NumberEditor()),
+            TableColumn(field="Payroll Taxes", title="Payroll Taxes",
+                        editor=NumberEditor(),
+                        formatter=NumberFormatter(format="0.0")),
+            TableColumn(field="Corporate\nIncome Taxes", title="Corporate Income Taxes",
+                        editor=NumberEditor(),
+                        formatter=NumberFormatter(format="0.0")),
+            TableColumn(field="Excise Taxes", title="Excise Taxes",
+                        editor=NumberEditor(),
+                        formatter=NumberFormatter(format="0.0")),
+            TableColumn(field="Estate and\nGift Taxes", title="Estate and Gift Taxes",
+                        editor=NumberEditor()),
+            TableColumn(field="Customcs Duties", title="Customs Duties",
+                        editor=NumberEditor()),
+            TableColumn(field="Miscellaneous\nReceipts", title="Miscellaneous Receipts",
+                        editor=NumberEditor()),
+            TableColumn(field="Total", title="Total",
+                        editor=NumberEditor()),
+        ]
+        data_table = DataTable(source=source, columns=columns, editable=False, width=1000)
+        year_range = Range1d(int(first_year)-1, int(last_year)+1)
+        plot = Plot(title=None, x_range=year_range, y_range=DataRange1d(), plot_width=1000, plot_height=300)
+        # Set up x & y axis
+        plot.add_layout(LinearAxis(), 'below')
+        yaxis = LinearAxis()
+        plot.add_layout(yaxis, 'left')
+        plot.add_layout(Grid(dimension=1, ticker=yaxis.ticker))
+
+        # Add Glyphs
+        ind_inc_tax_glyph = Line(x="index", y="Individual\nIncome Taxes")
+        payroll_taxes_glyph = Line(x="index", y="Payroll Taxes")
+        ind_inc_tax = plot.add_glyph(source, ind_inc_tax_glyph)
+        payroll_taxes = plot.add_glyph(source, payroll_taxes_glyph)
+
+        # Add the tools
+        tooltips = [
+            ("Individual\nIncome Taxes", "@individualincometaxes"),
+            ("Payroll Taxes", "@payrolltaxes"),
+            ("Corporate\nIncome Taxes", "@corporateincometaxes"),
+            ("Excise Taxes", "@excisetaxes"),
+            ("Estate and\nGift Taxes", "@estategifttaxes"),
+            ("Customs Duties", "@customsduties"),
+            ("Miscellaneious\nReceipts", "@miscellaneousreceipts"),
+            ("Total", "@total"),
+            ("Year", "@year"),
+        ]
+
+        cty_hover_tool = HoverTool(renderers=[ind_inc_tax], tooltips=tooltips + [("Individual Income Taxes", "@individualincometaxes")])
+        hwy_hover_tool = HoverTool(renderers=[payroll_taxes], tooltips=tooltips + [("Payroll Taxes", "@payrolltaxes")])
+        select_tool = BoxSelectTool(renderers=[ind_inc_tax, payroll_taxes], dimensions='width')
+        plot.add_tools(cty_hover_tool, hwy_hover_tool, select_tool)
+        layout = Column(plot, data_table)
+        doc = Document()
+        doc.add_root(layout)
+        doc.validate()
+        filename = "/Users/traderghazy/workspace/data/bokeh/html/CBO_revenues.html"
+        with open(filename, "w") as f:
+            f.write(file_html(doc, INLINE, "CBO Revenues"))
+        print("Wrote %s" % filename)
+        view(filename)
 
     def bokeh_scatter(self,
                       x_data,
