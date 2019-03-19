@@ -18,10 +18,12 @@ class CboExcelApi:
         revenues_sheet = self.workbook.get_sheet_by_name('2. Revenues')
         outlays_sheet = self.workbook.get_sheet_by_name('3. Outlays')
         begin_tabledata_row_num = 0
+        title_of_revenues_plot = ""
         for cell_obj in revenues_sheet['A1':'A200']:
             for cell in cell_obj:
                 if cell.value is not None:
                     if isinstance(cell.value, str) and cell.value.startswith("2. Revenues"):
+                        title_of_revenues_plot = cell.value
                         begin_tabledata_row_num = cell.row + 2
         # row_num now set to where table data starts
         # check first to make sure its not empty
@@ -56,17 +58,31 @@ class CboExcelApi:
                                                       orient='index')
         revenues_perc_gdp__df.columns = clean_header_list
         revenues_df.columns = clean_header_list
-        return revenues_df, revenues_perc_gdp__df
+        return revenues_df, revenues_perc_gdp__df, title_of_revenues_plot, title_of_revenues_plot + ", As % of GDP"
 
     def visualizeCbo(self,
-                     df):
+                     df,
+                     title,
+                     xlabel,
+                     ylabel,
+                     html_output_filename):
 
-        ExtendBokeh.visualizeCbo(df)
+        ExtendBokeh.visualizeCbo(df, title, xlabel, ylabel, html_output_filename)
 
 if __name__ == "__main__":
 
     excel_filename = "/Users/traderghazy/workspace/data/cbo/51134-2019-01-historicalbudgetdata.xlsx"
     cboeapi = CboExcelApi(excel_filename)
-    revenues_df, revenues_perc_gdp_df = cboeapi.doWork()
-    cboeapi.visualizeCbo(df=revenues_df)
-    #cboeapi.visualizeCbo(df=revenues_perc_gdp_df)
+    revenues_df, revenues_perc_gdp_df, title_of_revenues_plot, title_of_revenues_plot_aspctGdp = cboeapi.doWork()
+    revenues_output_filename = "/Users/traderghazy/workspace/data/bokeh/html/CBO_revenues.html"
+    revenues_aspctGdp_output_filename = "/Users/traderghazy/workspace/data/bokeh/html/CBO_revenues_pctGdp.html"
+    cboeapi.visualizeCbo(df=revenues_df,
+                         title=title_of_revenues_plot,
+                         xlabel="Year",
+                         ylabel="In Billions (US $)",
+                         html_output_filename=revenues_output_filename)
+    cboeapi.visualizeCbo(df=revenues_perc_gdp_df,
+                         title=title_of_revenues_plot_aspctGdp,
+                         xlabel="Year",
+                         ylabel="% of GDP",
+                         html_output_filename=revenues_aspctGdp_output_filename)

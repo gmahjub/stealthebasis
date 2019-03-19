@@ -35,83 +35,124 @@ class ExtendBokeh(object):
         return super().__init__(**kwargs)
 
     @staticmethod
-    def visualizeCbo(df):
+    def visualizeCbo(df,
+                     title,
+                     xlabel,
+                     ylabel,
+                     html_output_filename):
 
+        fieldnames = [col_nm.replace('\n', '').lower().replace(' ','') for col_nm in df.columns]
+        df.columns = fieldnames
         source = ColumnDataSource(df)
-        ind_income_taxes = sorted(df["Individual\nIncome Taxes"].unique())
-        payroll_taxes = sorted(df["Payroll Taxes"].unique())
-        corporate_income_taxes = sorted(df["Corporate\nIncome Taxes"].unique())
-        excise_taxes = sorted(df["Excise Taxes"].unique())
-        estate_gift_taxes = sorted(df["Estate and\nGift Taxes"].unique())
-        customs_duties = sorted(df["Customs Duties"].unique())
-        misc_receipts = sorted(df["Miscellaneous Receipts"].unique())
-        total = sorted(df["Total"].unique())
+        print (df.columns)
+        ind_income_taxes = sorted(df["individualincometaxes"].unique())
+        payroll_taxes = sorted(df["payrolltaxes"].unique())
+        corporate_income_taxes = sorted(df["corporateincometaxes"].unique())
+        excise_taxes = sorted(df["excisetaxes"].unique())
+        estate_gift_taxes = sorted(df["estateandgifttaxes"].unique())
+        customs_duties = sorted(df["customsduties"].unique())
+        misc_receipts = sorted(df["miscellaneousreceipts"].unique())
+        total = sorted(df["total"].unique())
         #year = sorted(df["Year"].unique())
-        first_year = pd.to_numeric(df.Year).min()
-        last_year = pd.to_numeric(df.Year).max()
+        first_year = pd.to_numeric(df.year).min()
+        last_year = pd.to_numeric(df.year).max()
 
         columns = [
-            TableColumn(field="Individual\nIncome Taxes", title="Individual Income Taxes",
+            TableColumn(field="year", title="Year",
                         editor=NumberEditor()),
-            TableColumn(field="Payroll Taxes", title="Payroll Taxes",
+            TableColumn(field="individualincometaxes", title="Individual Income Taxes",
+                        editor=NumberEditor()),
+            TableColumn(field="payrolltaxes", title="Payroll Taxes",
                         editor=NumberEditor(),
                         formatter=NumberFormatter(format="0.0")),
-            TableColumn(field="Corporate\nIncome Taxes", title="Corporate Income Taxes",
+            TableColumn(field="corporateincometaxes", title="Corporate Income Taxes",
                         editor=NumberEditor(),
                         formatter=NumberFormatter(format="0.0")),
-            TableColumn(field="Excise Taxes", title="Excise Taxes",
+            TableColumn(field="excisetaxes", title="Excise Taxes",
                         editor=NumberEditor(),
                         formatter=NumberFormatter(format="0.0")),
-            TableColumn(field="Estate and\nGift Taxes", title="Estate and Gift Taxes",
+            TableColumn(field="estateandgifttaxes", title="Estate and Gift Taxes",
                         editor=NumberEditor()),
-            TableColumn(field="Customcs Duties", title="Customs Duties",
+            TableColumn(field="customsduties", title="Customs Duties",
                         editor=NumberEditor()),
-            TableColumn(field="Miscellaneous\nReceipts", title="Miscellaneous Receipts",
+            TableColumn(field="miscellaneousreceipts", title="Miscellaneous Receipts",
                         editor=NumberEditor()),
-            TableColumn(field="Total", title="Total",
+            TableColumn(field="total", title="Total",
                         editor=NumberEditor()),
         ]
         data_table = DataTable(source=source, columns=columns, editable=False, width=1000)
         year_range = Range1d(int(first_year)-1, int(last_year)+1)
-        plot = Plot(title=None, x_range=year_range, y_range=DataRange1d(), plot_width=1000, plot_height=300)
+        title_obj = Title()
+        title_obj.text = "Congressional Budget Office, CBO.gov: " + title
+        plot = Plot(title=title_obj, x_range=year_range, y_range=DataRange1d(), plot_width=1000, plot_height=300)
         # Set up x & y axis
         plot.add_layout(LinearAxis(), 'below')
         yaxis = LinearAxis()
         plot.add_layout(yaxis, 'left')
         plot.add_layout(Grid(dimension=1, ticker=yaxis.ticker))
+        plot.xaxis.axis_label = xlabel#"Year"
+        plot.yaxis.axis_label = ylabel#"In Billions (US $)"
 
         # Add Glyphs
-        ind_inc_tax_glyph = Line(x="index", y="Individual\nIncome Taxes")
-        payroll_taxes_glyph = Line(x="index", y="Payroll Taxes")
+        ind_inc_tax_glyph = Line(x="index", y="individualincometaxes", line_width=5, line_color='orange')
+        payroll_taxes_glyph = Line(x="index", y="payrolltaxes", line_width=4, line_color='blue')
+        corporate_income_taxes_glyph = Line(x="index", y="corporateincometaxes", line_width=3, line_color='green')
+        excise_taxes_glyph = Line(x="index", y="excisetaxes", line_width=2, line_color='yellow')
+        estate_and_gift_taxes_glyph = Line(x="index", y ="estateandgifttaxes", line_width=1, line_color='magenta')
+        customs_duties_glyph = Line(x="index", y="customsduties", line_width=1, line_color='limegreen')
+        misc_receipts_glyph = Line(x="index", y="miscellaneousreceipts", line_width=1, line_color='pink')
+        total_glyph = Line(x="index", y="total", line_color='red', line_width=6)
         ind_inc_tax = plot.add_glyph(source, ind_inc_tax_glyph)
         payroll_taxes = plot.add_glyph(source, payroll_taxes_glyph)
-
+        corporate_income_taxes = plot.add_glyph(source, corporate_income_taxes_glyph)
+        excise_taxes = plot.add_glyph(source, excise_taxes_glyph)
+        estate_gift_taxes = plot.add_glyph(source, estate_and_gift_taxes_glyph)
+        customs_duties = plot.add_glyph(source, customs_duties_glyph)
+        misc_receipts = plot.add_glyph(source, misc_receipts_glyph)
         # Add the tools
         tooltips = [
-            ("Individual\nIncome Taxes", "@individualincometaxes"),
-            ("Payroll Taxes", "@payrolltaxes"),
-            ("Corporate\nIncome Taxes", "@corporateincometaxes"),
-            ("Excise Taxes", "@excisetaxes"),
-            ("Estate and\nGift Taxes", "@estategifttaxes"),
-            ("Customs Duties", "@customsduties"),
-            ("Miscellaneious\nReceipts", "@miscellaneousreceipts"),
             ("Total", "@total"),
             ("Year", "@year"),
         ]
-
-        cty_hover_tool = HoverTool(renderers=[ind_inc_tax], tooltips=tooltips + [("Individual Income Taxes", "@individualincometaxes")])
-        hwy_hover_tool = HoverTool(renderers=[payroll_taxes], tooltips=tooltips + [("Payroll Taxes", "@payrolltaxes")])
-        select_tool = BoxSelectTool(renderers=[ind_inc_tax, payroll_taxes], dimensions='width')
-        plot.add_tools(cty_hover_tool, hwy_hover_tool, select_tool)
+        ind_inc_tax_hover_tool = HoverTool(renderers=[ind_inc_tax],
+                                           tooltips=tooltips + [("Individual Income Taxes", "@individualincometaxes")])
+        payroll_taxes_hover_tool = HoverTool(renderers=[payroll_taxes],
+                                             tooltips=tooltips + [("Payroll Taxes", "@payrolltaxes")])
+        corporate_income_taxes_hover_tool = HoverTool(renderers=[corporate_income_taxes],
+                                                      tooltips=tooltips + [("Corporate Income Taxes", "@corporateincometaxes")])
+        excise_taxes_hover_tool = HoverTool(renderers=[excise_taxes],
+                                            tooltips=tooltips + [("Excise Taxes", "@excisetaxes")])
+        estate_gift_taxes_hover_tool = HoverTool(renderers=[estate_gift_taxes],
+                                                 tooltips= tooltips + [("Estate/Gift Taxes", "@estateandgifttaxes")])
+        customs_duties_hover_tool = HoverTool(renderers=[customs_duties],
+                                              tooltips=tooltips + [("Customs Duties", "@customsduties")])
+        misc_receipts_hover_tool = HoverTool(renderers=[misc_receipts],
+                                             tooltips=tooltips + [("Misc Receipts", "@miscellaneousreceipts")])
+        select_tool = BoxSelectTool(renderers=[ind_inc_tax,
+                                               payroll_taxes,
+                                               corporate_income_taxes,
+                                               excise_taxes,
+                                               estate_gift_taxes,
+                                               customs_duties,
+                                               misc_receipts],
+                                    dimensions='width')
+        plot.add_tools(ind_inc_tax_hover_tool,
+                       payroll_taxes_hover_tool,
+                       corporate_income_taxes_hover_tool,
+                       excise_taxes_hover_tool,
+                       estate_gift_taxes_hover_tool,
+                       customs_duties_hover_tool,
+                       misc_receipts_hover_tool,
+                       select_tool)
         layout = Column(plot, data_table)
         doc = Document()
         doc.add_root(layout)
         doc.validate()
-        filename = "/Users/traderghazy/workspace/data/bokeh/html/CBO_revenues.html"
-        with open(filename, "w") as f:
+
+        with open(html_output_filename, "w") as f:
             f.write(file_html(doc, INLINE, "CBO Revenues"))
-        print("Wrote %s" % filename)
-        view(filename)
+        print("Wrote %s" % html_output_filename)
+        view(html_output_filename)
 
     def bokeh_scatter(self,
                       x_data,
