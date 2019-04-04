@@ -80,11 +80,11 @@ class ExtendBokeh(object):
             TableColumn(field="total", title="Total",
                         editor=NumberEditor()),
         ]
-        data_table = DataTable(source=source, columns=columns, editable=False, width=1000)
+        data_table = DataTable(source=source, columns=columns, editable=False, width=1300)
         year_range = Range1d(int(first_year)-1, int(last_year)+1)
         title_obj = Title()
         title_obj.text = "Congressional Budget Office, CBO.gov: " + title
-        plot = Plot(title=title_obj, x_range=year_range, y_range=DataRange1d(), plot_width=1000, plot_height=300)
+        plot = Plot(title=title_obj, x_range=year_range, y_range=DataRange1d(), plot_width=1300, plot_height=600)
         # Set up x & y axis
         plot.add_layout(LinearAxis(), 'below')
         yaxis = LinearAxis()

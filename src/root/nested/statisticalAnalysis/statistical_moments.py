@@ -202,7 +202,7 @@ class StatisticalMoments(object):
                     freq='D', # options are 'D', 'W', 'M'
                     start_date='2010-01-01',
                     end_date=str(pd.to_datetime('today')).split(' ')[0],
-                    fields=['adjOpen', 'adjHigh', 'adjLow', 'adjClose']):
+                    fields=['adjOpen', 'adjHigh', 'adjLow', 'adjClose', 'close']):
 
         if (type(ticker) is not list):
             symbols = [ticker]
@@ -223,6 +223,7 @@ class StatisticalMoments(object):
                                symbols=symbols)
         pricing_dict = mdo.get_px_data_df(start_date,
                                           end_date)
+        #print(pricing_dict['SPY'].columns)
         return_dict = {}
         for ticker in symbols:
             pricing_df = pricing_dict[ticker]
@@ -284,7 +285,9 @@ class StatisticalMoments(object):
                                        'adjHigh': 'max',
                                        'adjLow': 'min',
                                        'adjClose': take_last,
-                                       'adjVolume': 'sum'})
+                                       'adjVolume': 'sum',
+                                       'close': take_last},
+                                  loffset=pd.offsets.timedelta(days=-6))
         return output
 
     """ Calculate the kurtosis of the returns for the specificed ticker, with specificed

@@ -47,6 +47,7 @@ def create_logger(log_file_name,
     logger.addHandler(console)
     
     logger.info('Completed configuring logger()!')
+    logger.info('this is being run, idiot!')
 
 def get_logger():
     

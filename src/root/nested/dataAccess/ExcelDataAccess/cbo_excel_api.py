@@ -2,6 +2,7 @@ from openpyxl import load_workbook
 from root.nested import get_logger
 from root.nested.visualize.extend_bokeh import ExtendBokeh
 import pandas as pd
+import requests
 
 class CboExcelApi:
 
@@ -10,6 +11,19 @@ class CboExcelApi:
 
         self.logger = get_logger()
         self.workbook = load_workbook(xlsx_file_name)
+
+    def downloadCboData(self):
+
+        budget_economic_data_url = 'https://www.cbo.gov/about/products/budget-economic-data'
+        historical_budget_data_url = 'https://www.cbo.gov/system/files/2019-01/51134-2019-01-historicalbudgetdata.xlsx'
+        r = requests.get(historical_budget_data_url)
+        with open('/Users/traderghazy/workspace/data/cbo/51134-2019-01-historicalbudgetdata.xlsx', 'wb') as f:
+            f.write(r.content)
+        self.logger.info("CboExcelApi.downloadCbodata(): %s ", r.status_code)
+        self.logger.info("CboExcelApi.downloadCboData(): %s ", r.headers['content_type'])
+        self.logger.info("CboExcelApi.downloadCboData(): %s ", r.encoding)
+
+        return
 
     def doWork(self):
 

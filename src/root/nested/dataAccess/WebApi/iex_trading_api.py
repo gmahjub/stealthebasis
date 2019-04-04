@@ -213,29 +213,6 @@ if __name__ == '__main__':
 
     from datetime import timedelta, datetime
     iextapi = IEXTradingApi()
-    #iextapi.get_co_sector('AAPL')
-    #iextapi.get_co_peers('AAPL')
-    #iextapi.get_crypto()
-
-    #df = iextapi.get_symbols_universe()
-    #print (df.iloc[0:3,])
-    #print (df.info())
-    #print (df.head())
-    #iextapi.get_these_types_from_symbols_universe(type_list=['et'])
-    #unique_types = iextapi.get_unique_sec_types_symbols_universe()
-    #print ("IEX unique types are ", unique_types)
-
-    #df=iextapi.get_symbols_universe()
-    #df=iextapi.get_these_types_from_symbols_universe(df, type_list=['et'])
-    #df.set_index('symbol', inplace = True)
-    #print(df.loc['SPY'])
-
-    #today_ymd = datetime.now().strftime("%Y%m%d")
     today_ymd = datetime.now() - timedelta(days = 0)
     today_ymd = today_ymd.strftime("%Y%m%d")
-
     iextapi.co_earnings_today(today_ymd=today_ymd)
-
-    #print (df.info())
-
-    #iextapi.create_sector_industry_universe()
