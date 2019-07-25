@@ -257,6 +257,82 @@ class TrackStatMomProj:
         return df, px_ret_type_list, px_rets, px_log_rets, p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf
 
     @staticmethod
+    def monte_carlo_vs_bootstrapping_example():
+
+        import datetime
+        import pandas as pd
+        import numpy as np
+        from functools import reduce
+        import pandas_datareader.data as web
+        import random
+        import matplotlib.pyplot as plt
+        import matplotlib as mpl
+        import seaborn as sns
+        mpl.style.use('ggplot')
+        figsize=(15,8)
+
+        start, end = datetime.datetime(2009, 12, 30), datetime.datetime(2019, 7, 24)
+        tickers = ["^DJI", "^IXIC", "^GSPC", "^RUT"]
+        asset_universe = pd.DataFrame([web.DataReader(ticker, 'yahoo', start, end).loc[:, 'Adj Close']
+                                       for ticker in tickers], index=tickers).T.fillna(method='ffill')
+        asset_universe = asset_universe/asset_universe.iloc[0,:]
+        asset_universe.plot(figsize=figsize)
+
+        # when we do mean along axis = 1, we are essentially doing an equally weighted portfolio,
+        # simply averaging all the returns of the individual assets
+        portfolio_returns = asset_universe.pct_change().dropna().mean(axis=1)
+        portfolio = (asset_universe.pct_change().dropna().mean(axis=1) + 1).cumprod()
+        asset_universe.plot(figsize=figsize, alpha=0.4)
+        portfolio.plot(label="Portfolio", color='black')
+        plt.legend()
+
+        # bootstrapping process below
+        # portfolio returns are individual return values. "random.choices" is from the random package
+        # we choose a sample of size k (here is 252) rom the population (portfolio_returns)
+        # basically we are choosing 1 year as our sample size.
+        # we do that 1000 times (so we have 1000 samples of size 252 (1 year).
+        # last step is calculate the cumulative product, and that is the line we will plot.
+        portfolio_bootstrapping = (1+pd.DataFrame([random.choices(list(portfolio_returns.values), k=252)
+                                                   for i in range(1000)]).T.shift(1).fillna(0)).cumprod()
+        portfolio_bootstrapping.plot(figsize=figsize, legend=False, linewidth=1, alpha=0.2, color='b')
+
+        # the next process is also bootstrapping, but instead of creating the portfolio return,
+        # it simply samples the individual returns first, and then creates the portfolio return
+        # from the sampled data.
+        # this should be (and is) the same as sampling the portfolio returns.
+        asset_universe_returns = asset_universe.pct_change()
+        portfolio_constituents_bootstrapping = pd.DataFrame([((asset_universe_returns.iloc[random.choices(
+            range(len(asset_universe)), k = 252)]).mean(axis=1)+1).cumprod().values
+                                                             for x in range(1000)]).T
+        portfolio_constituents_bootstrapping.plot(figsize=figsize, legend=False, linewidth=1, alpha=0.2, color='purple')
+
+        # Next we do the Monte Carlo method, which is a parametric process.
+        # Here we will sample the portfolio returns, next we will sample the individual asset returns.
+        mu = portfolio_returns.mean()
+        sigma = portfolio_returns.std()
+        # the above are the two parameters are required by monte carlo if we are assuming a normal distribution
+        # next we will create the distribution (normal) from the above parameters (mu, sigma)
+        portfolio_mc = pd.DataFrame([(np.random.normal(loc=mu, scale=sigma, size=252)+1)
+                                     for x in range(1000)]).T.cumprod()
+        portfolio_mc.plot(figsize=figsize, legend=False, linewidth=1, alpha=0.2, color='green')
+
+        # Monte Carlo (sampling individual asset returns)
+        asset_returns_dfs = []
+        for asset in asset_universe_returns.mean().index:
+            mu = asset_universe_returns.mean()[asset]
+            sigma = asset_universe_returns.std()[asset]
+            asset_mc_rets = pd.DataFrame([(np.random.normal(loc=mu,
+                                                            scale=sigma,
+                                                            size=252)) for x in range(1000)]).T
+            asset_returns_dfs.append(asset_mc_rets)
+            # so the above is the returns for each asset, taking the mean and standard deviation, as parameters
+        # equal-weighted
+        weighted_asset_returns_dfs = [(returns_df/len(tickers)) for returns_df in asset_returns_dfs]
+        portfolio_constituents_mc = (reduce(lambda x, y: x + y, weighted_asset_returns_dfs)+1).cumprod()
+        portfolio_constituents_mc.plot(figsize=figsize, legend=False, linewidth=1, alpha=0.2, color='orange')
+        plt.show()
+
+    @staticmethod
     def plot_portfolio_correlation_matrix(px_returns_df):
 
         import seaborn as sns
@@ -711,6 +787,8 @@ class TrackStatMomProj:
 
 
 if __name__ == '__main__':
+
+    TrackStatMomProj.monte_carlo_vs_bootstrapping_example()
 
     spyder_etfs_list = ['XLE', 'XLU', 'XLF', 'XLI', 'XLK', 'XLP', 'XTL', 'XLV', 'XLY']
 
