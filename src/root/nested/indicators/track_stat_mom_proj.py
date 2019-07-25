@@ -13,6 +13,7 @@ import numpy as np
 import scipy.stats as stats
 # import plotly.plotly as py
 # import plotly.graph_objs as go
+LOGGER = get_logger()
 
 
 class TrackStatMomProj:
@@ -20,10 +21,10 @@ class TrackStatMomProj:
     def __init__(self,
                  stock_universe_filename='Russ3K_holdings',
                  use_iex_trading_symbol_universe=False,
-                 sec_type_list = ['cs', 'et'],
-                 daily_window_sizes = [30, 60, 90, 120, 180, 270],
-                 weekly_window_sizes = [4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52],
-                 monthly_window_sizes = [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36]):
+                 sec_type_list=['cs','et'],
+                 daily_window_sizes=[30, 60, 90, 120, 180, 270],
+                 weekly_window_sizes=[4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52],
+                 monthly_window_sizes=[3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36]):
 
         self.logger = get_logger()
         self.sm = StatisticalMoments()
@@ -62,24 +63,35 @@ class TrackStatMomProj:
         pricing = pricing_df[fields]
         return pricing
 
+
     def get_stock_returns(self,
                           ticker,
                           start_date='2010-01-01',
                           end_date=str(pd.to_datetime('today')).split(' ')[0],
                           px_type='adjClose'):
-
+        """ USE THIS FUNCTION TO RETRIEVE MULTIPLE SYMBOLS OF PRICE DATA
+        px_type is required here, and only one px_type can be given.
+        ticker is misleading. It is actually a numpy array of tickers.
+        THIS IS THE FUNCTION TO USE FOR ALL PX DATA RETRIEVAL!!!! GM - 7/16/2019"""
         symbols = [ticker]
+        symbols = np.asarray(symbols)[0]
         source = 'Tiingo'
-        mdo = TiingoDataObject(start_date = start_date,
-                               end_date = end_date,
-                               source = source,
-                               symbols = symbols)
+        mdo = TiingoDataObject(start_date=start_date,
+                               end_date=end_date,
+                               source=source,
+                               symbols=symbols)
         pricing_dict = mdo.get_px_data_df(start_date,
                                           end_date) # returned df will not include all dates up to, but not including, end_date
-        pricing_df = pricing_dict[ticker] # dataframe containing the price data
-        pricing = pricing_df[px_type]
-        returns = pricing.pct_change()[1:]
-        return returns
+        series_dict = {}
+        for symbol in symbols:
+            pricing_df = pricing_dict[symbol]
+            px_series = pricing_df[px_type]
+            px_rets = px_series.pct_change()[1:]
+            px_rets = px_rets.rename(symbol+'_'+px_type)
+            series_dict[symbol+'_'+px_type] = px_rets
+        return_df = pd.DataFrame(data=series_dict)
+
+        return return_df
 
     def get_stock_universe(self):
 
@@ -91,6 +103,7 @@ class TrackStatMomProj:
                              'are %s', self.stock_universe_filename, str(pd_df.columns))
         else:
             ticker_col_nm = 'symbol'
+            self.sec_type_list=['et']
             iex_trading_api = IEXTradingApi(sec_type_list=self.sec_type_list)
             pd_df = iex_trading_api.get_symbols_universe()
             pd_df = pd_df.set_index('symbol')
@@ -104,7 +117,7 @@ class TrackStatMomProj:
 
         ### for testing, just do the first row -- REMEMBER to UNDO THIS!!! GM 12/9/2018
         small_df = symbol_universe_df.head(1)
-        print (small_df)
+        print(small_df)
         return_val_from_vectorized = small_df.apply(self.vectorized_symbols_func, axis=1)
         return return_val_from_vectorized
 
@@ -141,7 +154,7 @@ class TrackStatMomProj:
                        benchmarks,
                        spread_ratios_df=None):
 
-        """ This function needs some work. Right now all spread prices wille evaluate to 0.
+        """ This function needs some work. Right now all spread prices will evaluate to 0.
             Ideally, we should be providing the spread ratio in spread_ratios_df (vs. each benchmark)
             TODO!!!
         """
@@ -241,7 +254,198 @@ class TrackStatMomProj:
         p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf = TrackStatMomProj.outlier_analysis(px_rets)
         px_log_rets = np.log(1 + px_rets)
 
-        return (df, px_ret_type_list, px_rets, px_log_rets, p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf )
+        return df, px_ret_type_list, px_rets, px_log_rets, p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf
+
+    @staticmethod
+    def plot_portfolio_correlation_matrix(px_returns_df):
+
+        import seaborn as sns
+        import matplotlib.pyplot as plt
+        correlation_matrix = px_returns_df.corr(method='pearson')
+        sns.heatmap(data=correlation_matrix,
+                    annot=True,
+                    cmap="YlGnBu",
+                    linewidths=0.3,
+                    annot_kws={"size": 8})
+
+        # Plot aesthetics
+        plt.xticks(rotation=45)
+        plt.yticks(rotation=0)
+        plt.show()
+
+    @staticmethod
+    def plot_portfolio_weighted_return(px_returns_df,
+                                       portfolio_size,
+                                       portfolio_weights=None,
+                                       mkt_caps=False):
+
+        """ This function takes a static portfolio weight for the entire duration of the return set.
+        We would like to create a function, or modify this function, such that each day, or each week,
+        or each month, we can use a different weighting based on some dynamic strategy. """
+
+        import matplotlib.pyplot as plt
+        if mkt_caps is True:
+            # this means the portfolio weights are actual mkt caps of the companies, so we need to calculate
+            portfolio_weights = mkt_caps/np.sum(mkt_caps)
+            LOGGER.info("TrackStatMomProj.plot_portfolio_weighted_return(): using market cap weighted portfolio!")
+        if portfolio_weights is None:
+            # use equal weighted portfolio
+            portfolio_weights = np.repeat(1/portfolio_size, portfolio_size)
+            LOGGER.info("TrackStatMomProj.plot_portfolio_weighted_return(): using equal weighted portfolio!")
+        portfolio_weighted_returns_df = px_returns_df.mul(portfolio_weights, axis=1)
+        portfolio_weighted_returns_df['Portfolio'] = portfolio_weighted_returns_df.sum(axis=1)
+        portfolio_weighted_cumm_returns_df = ((1 + portfolio_weighted_returns_df["Portfolio"]).cumprod() - 1)
+        portfolio_weighted_cumm_returns_df.plot()
+        plt.show()
+
+    @staticmethod
+    def portfolio_covariance_matrix(px_returns_df,
+                                    annualize=True):
+
+        # px_returns_df is a dataframe of stock returns
+        # each column is a stock returns time series
+        # each row is a date
+        cov_mat = px_returns_df.cov()
+        if annualize is True:
+            cov_mat*=252
+        return cov_mat
+
+    @staticmethod
+    def create_random_portfolios(portfolio_tickers,
+                                 portfolio_size,
+                                 use_dirichlet=False,
+                                 how_many_portfolios=1):
+        """ Two different methods for creating random weightings (that sum to 1) for testing of
+        different portfolio compositions. Default is one portfolio, which should be changed. In
+        reality, you would want to test potentially thousands of portfolio weightings. For more
+        information on Dirichlet Distribution, see:
+        https://stackoverflow.com/questions/18659858/generating-a-list-of-random-numbers-summing-to-1"""
+
+        random_portfolios = []
+        if not use_dirichlet:
+            for port_num in range(how_many_portfolios):
+                random_portfolio_weights = np.random.random(portfolio_size)
+                random_portfolio_weights /= random_portfolio_weights.sum()
+                random_portfolios.append(random_portfolio_weights)
+            random_portfolios = np.array(random_portfolios)
+        else:
+            random_portfolios = np.random.dirichlet(np.ones(portfolio_size), size=how_many_portfolios)
+        # random portfolios is of type numpy.ndarray. We would want to convert this to a pandas dataframe.
+        random_portfolios_df = pd.DataFrame(random_portfolios)
+        random_portfolios_df.columns = portfolio_tickers
+        return random_portfolios_df
+
+    @staticmethod
+    def calculate_portfolio_sharpe_ratio(portfolio_weights_df,
+                                         portfolio_returns_df):
+
+        return 1
+
+    @staticmethod
+    def portfolio_standard_deviation(portfolio_weights,
+                                     px_returns_df):
+
+        cov_mat_annualized = TrackStatMomProj.portfolio_covariance_matrix(px_returns_df=px_returns_df)
+        # portfolio weights are the weighting for each of the products in the portfolio
+        portfolio_volatility = np.sqrt(np.dot(portfolio_weights.T, np.dot(cov_mat_annualized, portfolio_weights)))
+        return portfolio_volatility
+
+    @staticmethod
+    def plot_efficient_frontier(simulation_results):
+
+        import matplotlib.pyplot as plt
+        # locate position of portfolio with highest Sharpe Ratio
+        max_sharpe_port = simulation_results.iloc[simulation_results['Annualized Sharpe'].idxmax()]
+        # locate positon of portfolio with minimum standard deviation
+        min_vol_port = simulation_results.iloc[simulation_results['Annualized Vol'].idxmin()]
+        # create scatter plot coloured by Sharpe Ratio
+        plt.scatter(simulation_results['Annualized Vol'], simulation_results['Annualized Return'],
+                    c=simulation_results['Annualized Sharpe'], cmap='RdYlBu')
+        plt.xlabel('Annualized Volatility')
+        plt.ylabel('Annualized Returns')
+        plt.colorbar()
+        # plot red star to highlight position of portfolio with highest Sharpe Ratio
+        print (max_sharpe_port)
+        print (type(max_sharpe_port))
+        print (max_sharpe_port['Annualized Vol'], max_sharpe_port['Annualized Return'])
+        plt.scatter(max_sharpe_port['Annualized Vol'], max_sharpe_port['Annualized Return'], marker=(5, 1, 0), color='r', s=1000)
+        # plot green star to highlight position of minimum variance portfolio
+        plt.scatter(min_vol_port['Annualized Vol'], min_vol_port['Annualized Return'], marker=(5, 1, 0), color='g', s=1000)
+        plt.show()
+
+    def create_portfolio_returns(self,
+                                 symbols,
+                                 start_date='2010-01-01',
+                                 end_date=str(pd.to_datetime('today')).split(' ')[0],
+                                 px_type='adjClose'):
+
+        import matplotlib.pyplot as plt
+        portfolio_returns = self.get_stock_returns(ticker=symbols,
+                                                   start_date=start_date,
+                                                   end_date=end_date,
+                                                   px_type=px_type)
+
+        portfolio_size = len(portfolio_returns.columns)
+        portfolio_weights = np.repeat(1/portfolio_size, portfolio_size)
+        portfolio_vol = TrackStatMomProj.portfolio_standard_deviation(portfolio_weights=portfolio_weights,
+                                                                      px_returns_df=portfolio_returns)
+        self.logger.info("TrackStatMomProj.create_portfolio_returns(): Portfolio Volatility = %f", portfolio_vol)
+        TrackStatMomProj.plot_portfolio_correlation_matrix(px_returns_df=portfolio_returns)
+        TrackStatMomProj.plot_portfolio_weighted_return(portfolio_returns, len(portfolio_returns.columns))
+        RandomPortfolios = TrackStatMomProj.create_random_portfolios(symbols, portfolio_size, False, 25000)
+        # now we need to vectorize a function to run through each row of portfolio weights and create
+        # a return and a volatility associeated with that portfolio.
+        port_perf_stats_df = RandomPortfolios.apply(self.vectorized_portfolio_calcs, axis=1, individual_returns=portfolio_returns)
+        min_sharpe, max_sharpe = port_perf_stats_df['Annualized Sharpe'].describe()[['min', 'max']]
+        sorted_portfolios = port_perf_stats_df.sort_values(by=['Annualized Sharpe'], ascending=False)
+        # Extract the corresponding weights for the MAX SHARPE RATIO portfolio
+        MSR_weights = sorted_portfolios.iloc[0, 0:len(portfolio_returns.columns)]
+        self.logger.info("TrackStatMomProj.create_portfolio_returns(): Max Sharpe Ratio Weights: %s", MSR_weights)
+        # Cast the MSR weights as a numpy array
+        MSR_weights_array = np.array(MSR_weights)
+        # Calculate the MSR portfolio returns
+        portfolio_returns['Portfolio_MSR'] = portfolio_returns.iloc[:, 0:len(portfolio_returns.columns)].\
+            mul(MSR_weights_array, axis=1).sum(axis=1)
+        cumm_msr_port = ((1+portfolio_returns['Portfolio_MSR']).cumprod()-1)
+        self.logger.info("TrackStatMomProj.create_portfolio_returns():Cummulative Return, MSR Portfolio: %f",
+                         round(cumm_msr_port[-1]*100.0, 2))
+        cumm_msr_port.plot()
+        plt.show()
+
+        # GLOBAL MINIMUM VOLATILITY portfolio
+        sorted_portfolios = port_perf_stats_df.sort_values(by=['Annualized Vol'], ascending=True)
+        # Extract the corresponding weights
+        GMV_weights = sorted_portfolios.iloc[0, 0:len(portfolio_returns.columns)]
+        #print ("Global Minimum Variance Weights", GMV_weights, type(GMV_weights))
+        self.logger.info("TrackStatMomProj.create_portfolio_returns(): Glob Min Var Port Weights: %s", GMV_weights)
+        # Cast the GMV weights as a numpy array
+        GMV_weights_array = np.array(GMV_weights)
+        # Calculate the GMV portfolio returns
+        portfolio_returns['Portfolio_GMV'] = portfolio_returns.iloc[:, 0:len(portfolio_returns.columns)].\
+            mul(GMV_weights_array, axis=1).sum(axis=1)
+        cumm_gmv_port = ((1+portfolio_returns['Portfolio_GMV']).cumprod()-1)
+        self.logger.info("TrackStatMomProj.create_portfolio_returns(): Cummulative Return, GMV Portfolio: %f",
+                         round(cumm_gmv_port[-1]*100.0, 2))
+        cumm_gmv_port.plot()
+        plt.show()
+
+        # plot the efficient frontier
+        TrackStatMomProj.plot_efficient_frontier(port_perf_stats_df)
+
+
+    def vectorized_portfolio_calcs(self,
+                                   row,
+                                   individual_returns):
+
+        portfolio_return = individual_returns.iloc[:,0:len(individual_returns.columns)].\
+            mul(row.values, axis=1).sum(axis=1)
+        annualized_port_ret = portfolio_return.mean()*252
+        annualized_port_vol = TrackStatMomProj.portfolio_standard_deviation(row.values, individual_returns)
+        annualized_port_sr = annualized_port_ret/annualized_port_vol
+        row['Annualized Return'] = annualized_port_ret
+        row['Annualized Vol'] = annualized_port_vol
+        row['Annualized Sharpe'] = annualized_port_sr
+        return row
 
     def vectorized_symbols_func(self,
                                 row):
@@ -350,7 +554,7 @@ class TrackStatMomProj:
                                                            "Excess Returns CDF"])
             excess_rets_hist_plots.append(excess_rets_normal_ovl)
             excess_rets_hist_plots.append(excess_rets_normal_cdf)
-            #px_rets_lognormal_ovl, px_rets_lognormal_cdf = \
+            # px_rets_lognormal_ovl, px_rets_lognormal_cdf = \
             #    ExtendBokeh.bokeh_histogram_overlay_normal(px_log_rets,
             #                                               titles=['Px Log Returns Histogram',
             #                                                       'Px Log Returns CDF'])
@@ -358,8 +562,8 @@ class TrackStatMomProj:
             excess_rets_olanalysis_plots.append(p_iqr_cdf_er)
             excess_rets_olanalysis_plots.append(p_iqr_3sr_hist_er)
             excess_rets_olanalysis_plots.append(p_iqr_3sr_cdf_er)
-        #hist_plots.append(px_rets_lognormal_ovl)
-        #hist_plots.append(px_rets_lognormal_cdf)
+        # hist_plots.append(px_rets_lognormal_ovl)
+        # hist_plots.append(px_rets_lognormal_cdf)
 
         #### below code puts out the plots for <ticker>.hist.html ####
         ##############################################################
@@ -508,6 +712,11 @@ class TrackStatMomProj:
 
 if __name__ == '__main__':
 
+    spyder_etfs_list = ['XLE', 'XLU', 'XLF', 'XLI', 'XLK', 'XLP', 'XTL', 'XLV', 'XLY']
+
     tsmp = TrackStatMomProj(use_iex_trading_symbol_universe=True)
     stock_universe_df, ticker_col_nm = tsmp.get_stock_universe()
-    tsmp.get_px_df(stock_universe_df)
+    spyder_etfs_df = stock_universe_df.loc[spyder_etfs_list]
+    print(spyder_etfs_df.index)
+    tsmp.create_portfolio_returns(spyder_etfs_df.index)
+    #tsmp.get_px_df(stock_universe_df)

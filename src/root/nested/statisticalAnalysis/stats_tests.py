@@ -48,6 +48,12 @@ class StatsTests(object):
         ks_test_stat, p_value = stats.kstest(rvs=rvs, cdf='norm', args=args, N=dist_size)
         return ks_test_stat, p_value
 
+    @staticmethod
+    def shapiro_test(returns):
+        # using shapiro test, check to see if the returns distribution is normal
+        shapiro_test_stat, p_value = stats.shapiro(returns)
+        return shapiro_test_stat, p_value
+
 
 if __name__ == '__main__':
 

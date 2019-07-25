@@ -68,6 +68,7 @@ class HackerStats(object):
         self.plot_simulation_ecdf(samples,
                                   x_label = 'x',
                                   y_label = 'y (NormalDist)')
+        return samples
 
     def sample_log_normal_dist(self, mu, sigma, size = 100000):
 
@@ -99,7 +100,6 @@ class HackerStats(object):
                         data):
 
         # check normality graphically
-
         mu = np.mean(data)
         sigma = np.std(data)
         samples = np.random.normal(loc=mu, scale=sigma, size=10000)
@@ -107,7 +107,7 @@ class HackerStats(object):
         ecdf_data = ECDF(data=data)
 
         _ = plt.plot(ecdf_theor.x_data, ecdf_theor.y_data)
-        _ = plt.plot(ecdf_data.x_data, ecdf_data.y_data, marker = '.', linestyle = 'none')
+        _ = plt.plot(ecdf_data.x_data, ecdf_data.y_data, marker='.', linestyle = 'none')
         _ = plt.xlabel('x')
         _ = plt.ylabel('y)')
         plt.show()
@@ -119,7 +119,7 @@ class HackerStats(object):
                              title='ECDF'):
 
         self.logger.info("HackertStats.plot_simulation_ecdf.data: %s ", str(data))
-        ecdf = ECDF(data = data)
+        ecdf = ECDF(data=data)
         ecdf.plot_ecdf(x_label, y_label, title)
         return (ecdf)
 

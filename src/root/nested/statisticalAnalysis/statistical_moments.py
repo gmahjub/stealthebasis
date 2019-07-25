@@ -69,7 +69,7 @@ class StatisticalMoments(object):
                        end_date):
 
         StatisticalMoments.LOGGER.info("StatisticalMoments.test_normality(): running function...")
-        returns = self.get_stock_returns(ticker, start_date, end_date)
+        returns = self.get_stock_returns(ticker=ticker, start_date=start_date, end_date=end_date)
         StatisticalMoments.LOGGER.info('StatisticalMoments.test_normality(): skew is %f', stats.skew(returns))
         StatisticalMoments.LOGGER.info('StatisticalMoments.test_normality(): mean is %f', np.mean(returns))
         StatisticalMoments.LOGGER.info('StatisticalMoments.test_normality(): median is %f', np.median(returns))
@@ -78,12 +78,12 @@ class StatisticalMoments(object):
         _, pvalue, _, _ = jarque_bera(returns)
         if (pvalue > 0.05):
             StatisticalMoments.LOGGER.info('StatisticalMoments.test_normality(): '
-                                           'jarques-bera test p-value of %f is within 5% error tolerance, '
+                                           'jarques-bera test p-value of %f is within 5pct error tolerance, '
                                            'and therefore the returns are likely normal.', pvalue)
             print ("jarques-bera test p-value of ", pvalue, " is within 5% error tolerance, and therefore the returns are likely normal.")
         else:
-            StatisticalMoments.LOGGER.info('StatisticalMoments.test_normality():'
-                                           'jarques-bera test p-value of %f is not within 5% error tolerance; '
+            StatisticalMoments.LOGGER.info('StatisticalMoments.test_normality(): '
+                                           'jarques-bera test p-value of %f is not within 5pct error tolerance, '
                                            'returns are not likely normal.', pvalue)
             print ("jarques-bera test p-value of ", pvalue, " is not within 5% error tolerance; returns are not likely normal.")
 
@@ -97,10 +97,10 @@ class StatisticalMoments(object):
         StatisticalMoments.LOGGER.info('StatisticalMoments.get_stock_returns(): running function on ticker %s', ticker)
         symbols = [ticker]
         source = 'Tiingo'
-        mdo = TiingoDataObject(start_date = start_date, 
-                               end_date = end_date, 
-                               source = source, 
-                               symbols = symbols)
+        mdo = TiingoDataObject(start_date=start_date,
+                               end_date=end_date,
+                               source=source,
+                               symbols=symbols)
         pricing_dict = mdo.get_px_data_df(start_date,
                                           end_date)
         pricing_df = pricing_dict[ticker]
@@ -279,15 +279,22 @@ class StatisticalMoments(object):
     def down_sample_daily_price_data(self,
                                      pricing,
                                      to_freq='W'):
+        print ("what is to_freq", to_freq)
+        output = pricing.resample(to_freq, loffset=pd.offsets.timedelta(days=-6)).agg({'adjOpen': 'first',
+                                                                                       'adjHigh': 'max',
+                                                                                       'adjLow': 'min',
+                                                                                       'adjClose': 'last',
+                                                                                       'adjVolume': 'sum',
+                                                                                       'close': 'last'})
 
-        output = pricing.resample(to_freq,  # Weekly resample
-                                  how={'adjOpen': take_first,
-                                       'adjHigh': 'max',
-                                       'adjLow': 'min',
-                                       'adjClose': take_last,
-                                       'adjVolume': 'sum',
-                                       'close': take_last},
-                                  loffset=pd.offsets.timedelta(days=-6))
+        # output = pricing.resample(to_freq,  # Weekly resample
+        #                           how={'adjOpen': 'first',
+        #                                'adjHigh': 'max',
+        #                                'adjLow': 'min',
+        #                                'adjClose': 'last',
+        #                                'adjVolume': 'sum',
+        #                                'close': 'last'},
+        #                           loffset=pd.offsets.timedelta(days=-6))
         return output
 
     """ Calculate the kurtosis of the returns for the specificed ticker, with specificed
@@ -300,7 +307,7 @@ class StatisticalMoments(object):
                                    end_date = str(pd.to_datetime('today')).split(' ')[0]):
 
         if data is None:
-            returns = self.get_stock_returns(ticker, start_date, end_date)
+            returns = self.get_stock_returns(ticker=ticker, start_date=start_date, end_date=end_date)
         else:
             returns = data
         kurt = stats.kurtosis(returns)
@@ -325,7 +332,7 @@ class StatisticalMoments(object):
                                px_type = 'adjClose'):
 
         if data is None:
-            returns = self.get_stock_returns(ticker, start_date, end_date, px_type=px_type)
+            returns = self.get_stock_returns(ticker=ticker, start_date=start_date, end_date=end_date, px_type=px_type)
         else:
             returns = data
         skew = stats.skew(returns)
@@ -343,7 +350,7 @@ class StatisticalMoments(object):
                                 data = None):
 
         if data is None:
-            returns = self.get_stock_returns(ticker, start_date, end_date)
+            returns = self.get_stock_returns(ticker=ticker, start_date=start_date, end_date=end_date)
         else:
             returns = data
         roll_func = returns.rolling(window = window_size, center = False).skew()
@@ -479,7 +486,7 @@ class StatisticalMoments(object):
         normal_dist_sample = hs.sample_normal_dist(0.0, 0.5, size=1000)
         hs.check_normality(normal_dist_sample)
         bins = hs.get_num_bins_hist(len(normal_dist_sample))
-        hist, edges = np.histogram(normal_dist_sample, bins=bins, density=True)
+        hist, edges = np.histogram(normal_dist_sample, bins=int(np.round(bins)), density=True)
 
 
 if __name__ == '__main__':
@@ -489,9 +496,7 @@ if __name__ == '__main__':
     ticker = 'T'
     start_date = '2016-01-01'
     end_date = '2017-01-01'
-    pricing = sm.get_pricing(ticker = ticker, start_date = start_date, end_date = end_date)
-    print(type(pricing))
-    print(pricing.head())
+    pricing = sm.get_pricing(ticker=ticker, start_date=start_date, end_date=end_date)
     X = np.random.randint(100, size = 100)
     mu = np.mean(X)
     sm.calc_variance_metrics_example(data = X, semivar_cutoff=mu)
@@ -519,6 +524,7 @@ if __name__ == '__main__':
                                start_date='2015-01-01',
                                end_date='2017-01-01',
                                window_size=60)
+
 def take_first(px_series):
     return px_series[0]
 
