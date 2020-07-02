@@ -11,9 +11,17 @@ from root.nested.performance_analyzer import PerformanceAnalyzer
 import pandas as pd
 import numpy as np
 import scipy.stats as stats
+
 # import plotly.plotly as py
 # import plotly.graph_objs as go
 LOGGER = get_logger()
+
+
+class YieldCurveRiskPricing:
+
+    def __init__self(self,
+                     yield_curve_obj):
+        self.yield_curve_obj = yield_curve_obj
 
 
 class TrackStatMomProj:
@@ -21,7 +29,7 @@ class TrackStatMomProj:
     def __init__(self,
                  stock_universe_filename='Russ3K_holdings',
                  use_iex_trading_symbol_universe=False,
-                 sec_type_list=['cs','et'],
+                 sec_type_list=['cs', 'et'],
                  daily_window_sizes=[30, 60, 90, 120, 180, 270],
                  weekly_window_sizes=[4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52],
                  monthly_window_sizes=[3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36]):
@@ -45,6 +53,7 @@ class TrackStatMomProj:
     """ get_pricing: main function to retrieve daily price data
             The source of this data is currently Tiingo. 
         """
+
     def get_pricing(self,
                     ticker,
                     start_date,
@@ -63,7 +72,6 @@ class TrackStatMomProj:
         pricing = pricing_df[fields]
         return pricing
 
-
     def get_stock_returns(self,
                           ticker,
                           start_date='2010-01-01',
@@ -81,21 +89,22 @@ class TrackStatMomProj:
                                source=source,
                                symbols=symbols)
         pricing_dict = mdo.get_px_data_df(start_date,
-                                          end_date) # returned df will not include all dates up to, but not including, end_date
+                                          end_date)
+        # returned df will not include all dates up to, but not including, end_date
         series_dict = {}
         for symbol in symbols:
             pricing_df = pricing_dict[symbol]
             px_series = pricing_df[px_type]
             px_rets = px_series.pct_change()[1:]
-            px_rets = px_rets.rename(symbol+'_'+px_type)
-            series_dict[symbol+'_'+px_type] = px_rets
+            px_rets = px_rets.rename(symbol + '_' + px_type)
+            series_dict[symbol + '_' + px_type] = px_rets
         return_df = pd.DataFrame(data=series_dict)
 
         return return_df
 
     def get_stock_universe(self):
 
-        ticker_col_nm = 'Ticker' # default for Russell files
+        ticker_col_nm = 'Ticker'  # default for Russell files
         if self.use_iex_trading_symbol_universe is False:
             dpi = DataProviderInterface()
             pd_df = dpi.get_stock_universe_file_as_df(self.stock_universe_filename)
@@ -103,7 +112,6 @@ class TrackStatMomProj:
                              'are %s', self.stock_universe_filename, str(pd_df.columns))
         else:
             ticker_col_nm = 'symbol'
-            self.sec_type_list=['et']
             iex_trading_api = IEXTradingApi(sec_type_list=self.sec_type_list)
             pd_df = iex_trading_api.get_symbols_universe()
             pd_df = pd_df.set_index('symbol')
@@ -128,9 +136,9 @@ class TrackStatMomProj:
         # stock prices tend to me postively autocorrelated in the long term ('monthly'),
         # yet negatively correlation in the short term ('weekly')
         # px should be a dataframe of prices, or a pd.Series of prices
-        resampled_px_df=px_df.resample(sample_period, how=how )
-        px_rets=resampled_px_df.pct_change()
-        autocorrelation=px_rets[1:].autocorr()
+        resampled_px_df = px_df.resample(sample_period, how=how)
+        px_rets = resampled_px_df.pct_change()
+        autocorrelation = px_rets[1:].autocorr()
         return autocorrelation
 
     @staticmethod
@@ -144,8 +152,9 @@ class TrackStatMomProj:
         no_outliers_assume_norm = \
             StatisticalMoments.remove_outliers_from_normal_dist(no_outliers_non_norm)
         p_iqr_3sr_hist, p_iqr_3sr_cdf = ExtendBokeh.bokeh_histogram_overlay_normal(data=no_outliers_assume_norm,
-                                                                                   titles=['IQR & Sigma Rule OLR - Px Rets Histogram',
-                                                                                           'IQR & Sigma Rule OLR - Px Rets CDF'])
+                                                                                   titles=[
+                                                                                       'IQR & Sigma Rule OLR - Px Rets Histogram',
+                                                                                       'IQR & Sigma Rule OLR - Px Rets CDF'])
         return p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf
 
     @staticmethod
@@ -167,7 +176,7 @@ class TrackStatMomProj:
             benchmark_px.name = benchmark_ticker + '_' + benchmark_px.name
             series_list.append(benchmark_px)
             spread_ratio = px.div(benchmark_px)
-            spread_price = benchmark_px*spread_ratio - px
+            spread_price = benchmark_px * spread_ratio - px
             spread_price.name = ticker + '-' + benchmark_ticker + '_sprd'
             series_list.append(spread_price)
             df_sp = pd.concat(series_list, axis=1)
@@ -213,10 +222,11 @@ class TrackStatMomProj:
                 er_rolling_df.columns = map(lambda col_nm: ticker + '-' + key + '_' +
                                                            str(window_size) + price_freq + '_' + col_nm,
                                             er_rolling_df.columns)
-                #er_rolling_df = er_rolling_df.fillna(method='bfill')
+                # er_rolling_df = er_rolling_df.fillna(method='bfill')
                 excess_rets_list.append(er_rolling_df)
         df_excess = pd.concat(excess_rets_list, axis=1)[2:]
-        excess_rets_type_list = list(filter(lambda col_nm: ('_excess_rets' in col_nm) is True, df_excess.columns.values))
+        excess_rets_type_list = list(
+            filter(lambda col_nm: ('_excess_rets' in col_nm) is True, df_excess.columns.values))
         p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf = TrackStatMomProj.outlier_analysis(excess_rets)
         excess_log_rets = np.log(1 + excess_rets)
         return (df_excess, excess_rets_type_list, excess_rets, excess_log_rets,
@@ -247,7 +257,7 @@ class TrackStatMomProj:
                                                                   "skew_ret": stats.skew,
                                                                   "kurtosis_ret": stats.kurtosis})
             rolling_df.columns = map(lambda col_nm: str(window_size) + price_freq + '_' + col_nm, rolling_df.columns)
-            #rolling_df = rolling_df.fillna(method='bfill')
+            # rolling_df = rolling_df.fillna(method='bfill')
             all_df_to_concat.append(rolling_df)
         df = pd.concat(all_df_to_concat, axis=1)[1:]
         px_ret_type_list = list(filter(lambda col_nm: ('_px_rets' in col_nm) is True, df.columns.values))
@@ -269,13 +279,13 @@ class TrackStatMomProj:
         import matplotlib as mpl
         import seaborn as sns
         mpl.style.use('ggplot')
-        figsize=(15,8)
+        figsize = (15, 8)
 
         start, end = datetime.datetime(2009, 12, 30), datetime.datetime(2019, 7, 24)
         tickers = ["^DJI", "^IXIC", "^GSPC", "^RUT"]
         asset_universe = pd.DataFrame([web.DataReader(ticker, 'yahoo', start, end).loc[:, 'Adj Close']
                                        for ticker in tickers], index=tickers).T.fillna(method='ffill')
-        asset_universe = asset_universe/asset_universe.iloc[0,:]
+        asset_universe = asset_universe / asset_universe.iloc[0, :]
         asset_universe.plot(figsize=figsize)
 
         # when we do mean along axis = 1, we are essentially doing an equally weighted portfolio,
@@ -292,8 +302,8 @@ class TrackStatMomProj:
         # basically we are choosing 1 year as our sample size.
         # we do that 1000 times (so we have 1000 samples of size 252 (1 year).
         # last step is calculate the cumulative product, and that is the line we will plot.
-        portfolio_bootstrapping = (1+pd.DataFrame([random.choices(list(portfolio_returns.values), k=252)
-                                                   for i in range(1000)]).T.shift(1).fillna(0)).cumprod()
+        portfolio_bootstrapping = (1 + pd.DataFrame([random.choices(list(portfolio_returns.values), k=252)
+                                                     for i in range(1000)]).T.shift(1).fillna(0)).cumprod()
         portfolio_bootstrapping.plot(figsize=figsize, legend=False, linewidth=1, alpha=0.2, color='b')
 
         # the next process is also bootstrapping, but instead of creating the portfolio return,
@@ -302,7 +312,7 @@ class TrackStatMomProj:
         # this should be (and is) the same as sampling the portfolio returns.
         asset_universe_returns = asset_universe.pct_change()
         portfolio_constituents_bootstrapping = pd.DataFrame([((asset_universe_returns.iloc[random.choices(
-            range(len(asset_universe)), k = 252)]).mean(axis=1)+1).cumprod().values
+            range(len(asset_universe)), k=252)]).mean(axis=1) + 1).cumprod().values
                                                              for x in range(1000)]).T
         portfolio_constituents_bootstrapping.plot(figsize=figsize, legend=False, linewidth=1, alpha=0.2, color='purple')
 
@@ -312,7 +322,7 @@ class TrackStatMomProj:
         sigma = portfolio_returns.std()
         # the above are the two parameters are required by monte carlo if we are assuming a normal distribution
         # next we will create the distribution (normal) from the above parameters (mu, sigma)
-        portfolio_mc = pd.DataFrame([(np.random.normal(loc=mu, scale=sigma, size=252)+1)
+        portfolio_mc = pd.DataFrame([(np.random.normal(loc=mu, scale=sigma, size=252) + 1)
                                      for x in range(1000)]).T.cumprod()
         portfolio_mc.plot(figsize=figsize, legend=False, linewidth=1, alpha=0.2, color='green')
 
@@ -327,8 +337,8 @@ class TrackStatMomProj:
             asset_returns_dfs.append(asset_mc_rets)
             # so the above is the returns for each asset, taking the mean and standard deviation, as parameters
         # equal-weighted
-        weighted_asset_returns_dfs = [(returns_df/len(tickers)) for returns_df in asset_returns_dfs]
-        portfolio_constituents_mc = (reduce(lambda x, y: x + y, weighted_asset_returns_dfs)+1).cumprod()
+        weighted_asset_returns_dfs = [(returns_df / len(tickers)) for returns_df in asset_returns_dfs]
+        portfolio_constituents_mc = (reduce(lambda x, y: x + y, weighted_asset_returns_dfs) + 1).cumprod()
         portfolio_constituents_mc.plot(figsize=figsize, legend=False, linewidth=1, alpha=0.2, color='orange')
         plt.show()
 
@@ -362,11 +372,11 @@ class TrackStatMomProj:
         import matplotlib.pyplot as plt
         if mkt_caps is True:
             # this means the portfolio weights are actual mkt caps of the companies, so we need to calculate
-            portfolio_weights = mkt_caps/np.sum(mkt_caps)
+            portfolio_weights = mkt_caps / np.sum(mkt_caps)
             LOGGER.info("TrackStatMomProj.plot_portfolio_weighted_return(): using market cap weighted portfolio!")
         if portfolio_weights is None:
             # use equal weighted portfolio
-            portfolio_weights = np.repeat(1/portfolio_size, portfolio_size)
+            portfolio_weights = np.repeat(1 / portfolio_size, portfolio_size)
             LOGGER.info("TrackStatMomProj.plot_portfolio_weighted_return(): using equal weighted portfolio!")
         portfolio_weighted_returns_df = px_returns_df.mul(portfolio_weights, axis=1)
         portfolio_weighted_returns_df['Portfolio'] = portfolio_weighted_returns_df.sum(axis=1)
@@ -383,7 +393,7 @@ class TrackStatMomProj:
         # each row is a date
         cov_mat = px_returns_df.cov()
         if annualize is True:
-            cov_mat*=252
+            cov_mat *= 252
         return cov_mat
 
     @staticmethod
@@ -441,12 +451,14 @@ class TrackStatMomProj:
         plt.ylabel('Annualized Returns')
         plt.colorbar()
         # plot red star to highlight position of portfolio with highest Sharpe Ratio
-        print (max_sharpe_port)
-        print (type(max_sharpe_port))
-        print (max_sharpe_port['Annualized Vol'], max_sharpe_port['Annualized Return'])
-        plt.scatter(max_sharpe_port['Annualized Vol'], max_sharpe_port['Annualized Return'], marker=(5, 1, 0), color='r', s=1000)
+        print(max_sharpe_port)
+        print(type(max_sharpe_port))
+        print(max_sharpe_port['Annualized Vol'], max_sharpe_port['Annualized Return'])
+        plt.scatter(max_sharpe_port['Annualized Vol'], max_sharpe_port['Annualized Return'], marker=(5, 1, 0),
+                    color='r', s=1000)
         # plot green star to highlight position of minimum variance portfolio
-        plt.scatter(min_vol_port['Annualized Vol'], min_vol_port['Annualized Return'], marker=(5, 1, 0), color='g', s=1000)
+        plt.scatter(min_vol_port['Annualized Vol'], min_vol_port['Annualized Return'], marker=(5, 1, 0), color='g',
+                    s=1000)
         plt.show()
 
     def create_portfolio_returns(self,
@@ -462,7 +474,7 @@ class TrackStatMomProj:
                                                    px_type=px_type)
 
         portfolio_size = len(portfolio_returns.columns)
-        portfolio_weights = np.repeat(1/portfolio_size, portfolio_size)
+        portfolio_weights = np.repeat(1 / portfolio_size, portfolio_size)
         portfolio_vol = TrackStatMomProj.portfolio_standard_deviation(portfolio_weights=portfolio_weights,
                                                                       px_returns_df=portfolio_returns)
         self.logger.info("TrackStatMomProj.create_portfolio_returns(): Portfolio Volatility = %f", portfolio_vol)
@@ -471,7 +483,8 @@ class TrackStatMomProj:
         RandomPortfolios = TrackStatMomProj.create_random_portfolios(symbols, portfolio_size, False, 25000)
         # now we need to vectorize a function to run through each row of portfolio weights and create
         # a return and a volatility associeated with that portfolio.
-        port_perf_stats_df = RandomPortfolios.apply(self.vectorized_portfolio_calcs, axis=1, individual_returns=portfolio_returns)
+        port_perf_stats_df = RandomPortfolios.apply(self.vectorized_portfolio_calcs, axis=1,
+                                                    individual_returns=portfolio_returns)
         min_sharpe, max_sharpe = port_perf_stats_df['Annualized Sharpe'].describe()[['min', 'max']]
         sorted_portfolios = port_perf_stats_df.sort_values(by=['Annualized Sharpe'], ascending=False)
         # Extract the corresponding weights for the MAX SHARPE RATIO portfolio
@@ -480,11 +493,11 @@ class TrackStatMomProj:
         # Cast the MSR weights as a numpy array
         MSR_weights_array = np.array(MSR_weights)
         # Calculate the MSR portfolio returns
-        portfolio_returns['Portfolio_MSR'] = portfolio_returns.iloc[:, 0:len(portfolio_returns.columns)].\
+        portfolio_returns['Portfolio_MSR'] = portfolio_returns.iloc[:, 0:len(portfolio_returns.columns)]. \
             mul(MSR_weights_array, axis=1).sum(axis=1)
-        cumm_msr_port = ((1+portfolio_returns['Portfolio_MSR']).cumprod()-1)
+        cumm_msr_port = ((1 + portfolio_returns['Portfolio_MSR']).cumprod() - 1)
         self.logger.info("TrackStatMomProj.create_portfolio_returns():Cummulative Return, MSR Portfolio: %f",
-                         round(cumm_msr_port[-1]*100.0, 2))
+                         round(cumm_msr_port[-1] * 100.0, 2))
         cumm_msr_port.plot()
         plt.show()
 
@@ -492,32 +505,31 @@ class TrackStatMomProj:
         sorted_portfolios = port_perf_stats_df.sort_values(by=['Annualized Vol'], ascending=True)
         # Extract the corresponding weights
         GMV_weights = sorted_portfolios.iloc[0, 0:len(portfolio_returns.columns)]
-        #print ("Global Minimum Variance Weights", GMV_weights, type(GMV_weights))
+        # print ("Global Minimum Variance Weights", GMV_weights, type(GMV_weights))
         self.logger.info("TrackStatMomProj.create_portfolio_returns(): Glob Min Var Port Weights: %s", GMV_weights)
         # Cast the GMV weights as a numpy array
         GMV_weights_array = np.array(GMV_weights)
         # Calculate the GMV portfolio returns
-        portfolio_returns['Portfolio_GMV'] = portfolio_returns.iloc[:, 0:len(portfolio_returns.columns)].\
+        portfolio_returns['Portfolio_GMV'] = portfolio_returns.iloc[:, 0:len(portfolio_returns.columns)]. \
             mul(GMV_weights_array, axis=1).sum(axis=1)
-        cumm_gmv_port = ((1+portfolio_returns['Portfolio_GMV']).cumprod()-1)
+        cumm_gmv_port = ((1 + portfolio_returns['Portfolio_GMV']).cumprod() - 1)
         self.logger.info("TrackStatMomProj.create_portfolio_returns(): Cummulative Return, GMV Portfolio: %f",
-                         round(cumm_gmv_port[-1]*100.0, 2))
+                         round(cumm_gmv_port[-1] * 100.0, 2))
         cumm_gmv_port.plot()
         plt.show()
 
         # plot the efficient frontier
         TrackStatMomProj.plot_efficient_frontier(port_perf_stats_df)
 
-
     def vectorized_portfolio_calcs(self,
                                    row,
                                    individual_returns):
 
-        portfolio_return = individual_returns.iloc[:,0:len(individual_returns.columns)].\
+        portfolio_return = individual_returns.iloc[:, 0:len(individual_returns.columns)]. \
             mul(row.values, axis=1).sum(axis=1)
-        annualized_port_ret = portfolio_return.mean()*252
+        annualized_port_ret = portfolio_return.mean() * 252
         annualized_port_vol = TrackStatMomProj.portfolio_standard_deviation(row.values, individual_returns)
-        annualized_port_sr = annualized_port_ret/annualized_port_vol
+        annualized_port_sr = annualized_port_ret / annualized_port_vol
         row['Annualized Return'] = annualized_port_ret
         row['Annualized Vol'] = annualized_port_vol
         row['Annualized Sharpe'] = annualized_port_sr
@@ -531,7 +543,7 @@ class TrackStatMomProj:
         price_freq = 'D'
         win_price_freq = 60
         return_period = 45
-        skew_filter=(-2.0, 2.0)
+        skew_filter = (-2.0, 2.0)
         benchmark_ticker_list = self.benchmark_ticker_list
 
         ticker = row.name
@@ -578,13 +590,14 @@ class TrackStatMomProj:
             px_line_plot_er_band_breach_spans = \
                 ExtendBokeh.bokeh_px_line_plot(data=df_px,
                                                ticker=ticker,
-                                               benchmark_px_series=benchmark_px[benchmark_ticker].loc[first_ticker_date:,],
+                                               benchmark_px_series=benchmark_px[benchmark_ticker].loc[
+                                                                   first_ticker_date:, ],
                                                benchmark_ticker=benchmark_ticker,
                                                title=[co_nm + ' Px Chart Band Breaches'],
                                                subtitle=["Spread: " + ticker + '-' + benchmark_ticker],
                                                type_list=['adjClose', 'adjClose'],
                                                spans_list=spans_tuples_list_er,
-                                               which_axis_list=[0,1])
+                                               which_axis_list=[0, 1])
 
             excess_rets_line_plot = \
                 ExtendBokeh.bokeh_px_returns_plot(data=df_excess,
@@ -627,7 +640,7 @@ class TrackStatMomProj:
             excess_rets_normal_ovl, excess_rets_normal_cdf = \
                 ExtendBokeh.bokeh_histogram_overlay_normal(df_excess[col_str],
                                                            ["Excess Returns Hist",
-                                                           "Excess Returns CDF"])
+                                                            "Excess Returns CDF"])
             excess_rets_hist_plots.append(excess_rets_normal_ovl)
             excess_rets_hist_plots.append(excess_rets_normal_cdf)
             # px_rets_lognormal_ovl, px_rets_lognormal_cdf = \
@@ -648,7 +661,7 @@ class TrackStatMomProj:
                                                                     freq=price_freq,
                                                                     rolling_window_size=win_price_freq,
                                                                     var_bandwidth=3.0,
-                                                                    color = ('red','green'))
+                                                                    color=('red', 'green'))
         px_line_plot = ExtendBokeh.bokeh_px_line_plot(data=df_px,
                                                       ticker=ticker,
                                                       title=[co_nm + ' Px Chart'],
@@ -702,7 +715,8 @@ class TrackStatMomProj:
                                                  title=['Rolling Returns vs. Rolling Skew'],
                                                  subtitle=[str(return_period) + price_freq + '/' +
                                                            str(win_price_freq) + price_freq + ' Window'],
-                                                 type_list=['adjClose_px_rets_rolling', str(win_price_freq)+price_freq+'_skew_ret'],
+                                                 type_list=['adjClose_px_rets_rolling',
+                                                            str(win_price_freq) + price_freq + '_skew_ret'],
                                                  rolling_window_size=win_price_freq,
                                                  skew_filter=skew_filter)
         p_pxret_rolling_skew_line, p_pxret_rolling_skew_scatter = \
@@ -711,27 +725,32 @@ class TrackStatMomProj:
                                                  title=['Returns vs. Rolling Skew'],
                                                  subtitle=[str(1) + price_freq + '/' +
                                                            str(win_price_freq) + price_freq + ' Window'],
-                                                 type_list=['adjClose_px_rets', str(win_price_freq) + price_freq + '_skew_ret'],
+                                                 type_list=['adjClose_px_rets',
+                                                            str(win_price_freq) + price_freq + '_skew_ret'],
                                                  rolling_window_size=win_price_freq,
                                                  skew_filter=skew_filter)
 
         #### Below code puts out the plots for <ticker>.Excess.Returns.html ####
         ########################################################################
 
-
         # next, lets do the KS Test, to test for normality. We will do JB Test later.
-        ks_test_stat_raw_rets, p_value_raw_rets = StatsTests.ks_test(rvs = px_rets, dist_size=len(px_rets), cdf='norm')
-        ks_test_stat_log_rets, p_value_log_rets = StatsTests.ks_test(rvs = px_log_rets, dist_size=len(px_log_rets), cdf='norm')
-        self.logger.info("TrackstatMomProj.vectorized_symbols_func(): KS Test Stat (Raw Returns) is %s and p_value is %s",
-                         str(ks_test_stat_raw_rets), str(p_value_raw_rets))
-        self.logger.info("TrackstatMomProj.vectorized_symbols_func(): Is KS Test Stat (Raw Returns) %s as close to 0 as possible"
-                         " and p_value %s as close to 1 as possible? If p_value less than 0.05, Null Hypothesis (the"
-                         "two distributions RVS and CDF are equal) is rejected!", str(ks_test_stat_raw_rets), str(p_value_raw_rets))
-        self.logger.info("TrackstatMomProj.vectorized_symbols_func(): KS Test Stat (Log Returns) is %s and p_value is %s",
-                         str(ks_test_stat_log_rets), str(p_value_log_rets))
-        self.logger.info("TrackstatMomProj.vectorized_symbols_func(): Is KS Test Stat (Log Returns) %s as close to 0 as possible"
-                         " and p_value %s as close to 1 as possible? If p_value less than 0.05, the Null Hypothesis (the"
-                         "two distributions RVS and CDF are equal) is rejected!", str(ks_test_stat_log_rets), str(p_value_log_rets))
+        ks_test_stat_raw_rets, p_value_raw_rets = StatsTests.ks_test(rvs=px_rets, dist_size=len(px_rets), cdf='norm')
+        ks_test_stat_log_rets, p_value_log_rets = StatsTests.ks_test(rvs=px_log_rets, dist_size=len(px_log_rets),
+                                                                     cdf='norm')
+        self.logger.info(
+            "TrackstatMomProj.vectorized_symbols_func(): KS Test Stat (Raw Returns) is %s and p_value is %s",
+            str(ks_test_stat_raw_rets), str(p_value_raw_rets))
+        self.logger.info(
+            "TrackstatMomProj.vectorized_symbols_func(): Is KS Test Stat (Raw Returns) %s as close to 0 as possible"
+            " and p_value %s as close to 1 as possible? If p_value less than 0.05, Null Hypothesis (the"
+            "two distributions RVS and CDF are equal) is rejected!", str(ks_test_stat_raw_rets), str(p_value_raw_rets))
+        self.logger.info(
+            "TrackstatMomProj.vectorized_symbols_func(): KS Test Stat (Log Returns) is %s and p_value is %s",
+            str(ks_test_stat_log_rets), str(p_value_log_rets))
+        self.logger.info(
+            "TrackstatMomProj.vectorized_symbols_func(): Is KS Test Stat (Log Returns) %s as close to 0 as possible"
+            " and p_value %s as close to 1 as possible? If p_value less than 0.05, the Null Hypothesis (the"
+            "two distributions RVS and CDF are equal) is rejected!", str(ks_test_stat_log_rets), str(p_value_log_rets))
 
         # px_rets_weibull_ovl = ext_bokeh.bokeh_histogram_overlay_weibull(px_rets)
         # hist_plots.append(px_rets_weibull_ovl)
@@ -747,15 +766,17 @@ class TrackStatMomProj:
 
         html_output_file_title_excess_rets_olanalysis = ticker + '.outlier.analysis.html'
         html_output_file_excess_rets_olanalysis = html_output_file_path + \
-                                                        html_output_file_title_excess_rets_olanalysis
+                                                  html_output_file_title_excess_rets_olanalysis
 
         if (save_or_show is 'show'):
             ExtendBokeh.show_hist_plots(hist_plots,
                                         html_output_file,
                                         html_output_file_title)
-            ExtendBokeh.show_hist_plots([p_rolling_pxret_skew_line, p_rolling_pxret_skew_scatter, p_pxret_rolling_skew_line, p_pxret_rolling_skew_scatter],
-                                        html_output_file_skew_analysis,
-                                        html_output_file_title_skew_analysis)
+            ExtendBokeh.show_hist_plots(
+                [p_rolling_pxret_skew_line, p_rolling_pxret_skew_scatter, p_pxret_rolling_skew_line,
+                 p_pxret_rolling_skew_scatter],
+                html_output_file_skew_analysis,
+                html_output_file_title_skew_analysis)
             ExtendBokeh.show_hist_plots(excess_rets_hist_plots,
                                         html_output_file_excess_rets_analysis,
                                         html_output_file_title_excess_rets_analysis)
@@ -782,19 +803,24 @@ class TrackStatMomProj:
         # self.logger.info('TrackStatMomProj.vectorized_symbols_func(): histogram url for ticker %s is %s',
         #                 ticker, str(url))
 
-        skew = sm.calc_stock_return_skew(ticker=ticker, data = px_rets)
-        kurt = sm.calc_stock_return_kurtosis(ticker=ticker, data = px_rets)
+        skew = sm.calc_stock_return_skew(ticker=ticker, data=px_rets)
+        kurt = sm.calc_stock_return_kurtosis(ticker=ticker, data=px_rets)
 
 
 if __name__ == '__main__':
-
-    TrackStatMomProj.monte_carlo_vs_bootstrapping_example()
+    #TrackStatMomProj.monte_carlo_vs_bootstrapping_example()
 
     spyder_etfs_list = ['XLE', 'XLU', 'XLF', 'XLI', 'XLK', 'XLP', 'XTL', 'XLV', 'XLY']
+    index_etfs_list = ['SPY', 'QQQ', 'IWM', 'TLT', 'ZROZ', 'GLD', 'HYG',
+                       'LQD', 'SHY', 'FXE', 'FXY', 'EEM', 'FXI', 'IEF']
+    index_etfs_list = ['SPY', 'QQQ', 'IWM', 'DIA']
+
+    the_etf_list = index_etfs_list
 
     tsmp = TrackStatMomProj(use_iex_trading_symbol_universe=True)
     stock_universe_df, ticker_col_nm = tsmp.get_stock_universe()
-    spyder_etfs_df = stock_universe_df.loc[spyder_etfs_list]
-    print(spyder_etfs_df.index)
-    tsmp.create_portfolio_returns(spyder_etfs_df.index)
+    the_etf_df = stock_universe_df.reindex(the_etf_list)
+    tsmp.create_portfolio_returns(the_etf_df.index, start_date="2018-01-01")
+    # I like start date of 2018 for going forward because of volatility, autocorrelation of vol tells me going
+    # forward we will have less drifting up markets and more volatile markets like the past 2.5 years.
     #tsmp.get_px_df(stock_universe_df)

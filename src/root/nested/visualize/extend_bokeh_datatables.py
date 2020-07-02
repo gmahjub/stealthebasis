@@ -1,5 +1,5 @@
 from bokeh.document import Document
-from bokeh.models import ColumnDataSource, DataRange1d, Plot, LinearAxis, Grid, Circle, HoverTool, BoxSelectTool
+from bokeh.models import ColumnDataSource, DataRange1d, Plot, LinearAxis, Grid, Circle, HoverTool, BoxSelectTool, Title
 from bokeh.models.widgets import DataTable, TableColumn, StringFormatter, NumberFormatter, StringEditor, IntEditor, \
     NumberEditor, SelectEditor
 from bokeh.models.layouts import Column
@@ -7,69 +7,141 @@ from bokeh.embed import file_html
 from bokeh.resources import INLINE
 from bokeh.util.browser import view
 from bokeh.sampledata.autompg2 import autompg2 as mpg
+from root.nested.SysOs.os_mux import OSMuxImpl
+from root.nested import get_logger
 
-source = ColumnDataSource(mpg)
+LOGGER = get_logger()
 
-manufacturers = sorted(mpg["manufacturer"].unique())
-models = sorted(mpg["model"].unique())
-transmissions = sorted(mpg["trans"].unique())
-drives = sorted(mpg["drv"].unique())
-classes = sorted(mpg["class"].unique())
 
-columns = [
-    TableColumn(field="manufacturer", title="Manufacturer", editor=SelectEditor(options=manufacturers),
-                formatter=StringFormatter(font_style="bold")),
-    TableColumn(field="model", title="Model", editor=StringEditor(completions=models)),
-    TableColumn(field="displ", title="Displacement", editor=NumberEditor(step=0.1),
-                formatter=NumberFormatter(format="0.0")),
-    TableColumn(field="year", title="Year", editor=IntEditor()),
-    TableColumn(field="cyl", title="Cylinders", editor=IntEditor()),
-    TableColumn(field="trans", title="Transmission", editor=SelectEditor(options=transmissions)),
-    TableColumn(field="drv", title="Drive", editor=SelectEditor(options=drives)),
-    TableColumn(field="class", title="Class", editor=SelectEditor(options=classes)),
-    TableColumn(field="cty", title="City MPG", editor=IntEditor()),
-    TableColumn(field="hwy", title="Highway MPG", editor=IntEditor()),
-]
-data_table = DataTable(source=source, columns=columns, editable=True, width=1000)
+class ExtendDataTable:
 
-plot = Plot(title=None, x_range=DataRange1d(), y_range=DataRange1d(), plot_width=1000, plot_height=300)
+    @staticmethod
+    def make_correlation_datatable(correl_df):
+        correl_df.reset_index(inplace=True)
+        source = ColumnDataSource(correl_df)
+        target_ts_asset = sorted(correl_df["Target"].unique())
+        hedge_ts_asset = sorted(correl_df["Hedge"].unique())
+        columns = [
+            TableColumn(field="Target", title="Target Timeseries",
+                        formatter=StringFormatter(font_style="bold", text_color='red')),
+            TableColumn(field="Hedge", title="Hedge Timeseries",
+                        formatter=StringFormatter(font_style="bold", text_color='blue')),
+            TableColumn(field="Correlation", title="Correlation",
+                        formatter=StringFormatter(font_style="bold", text_color='darkgreen'))
 
-# Set up x & y axis
-plot.add_layout(LinearAxis(), 'below')
-yaxis = LinearAxis()
-plot.add_layout(yaxis, 'left')
-plot.add_layout(Grid(dimension=1, ticker=yaxis.ticker))
+        ]
+        data_table = DataTable(source=source, columns=columns, editable=False, width=1000)
+        plot = Plot(title=Title(text="Correlations, Target vs. Hedge Timeseries)", align="center"),
+                    x_range=DataRange1d(),
+                    y_range=DataRange1d(), plot_width=1000, plot_height=300)
+        # Set up x & y axis
+        plot.add_layout(LinearAxis(), 'below')
+        yaxis = LinearAxis()
+        plot.add_layout(yaxis, 'left')
+        plot.add_layout(Grid(dimension=1, ticker=yaxis.ticker))
+        # Add Glyphs
+        correlation_glyph = Circle(x="index", y="Correlation", fill_color="#396285", size=8, fill_alpha=0.5,
+                                   line_alpha=0.5)
+        target_glyph = Circle(x="index", y="Target", fill_color="#396285", size=8, fill_alpha=0.5,
+                              line_alpha=0.5)
+        hedge_glyph = Circle(x="index", y="Hedge", fill_color="#396285", size=8, fill_alpha=0.5,
+                             line_alpha=0.5)
+        correlation = plot.add_glyph(source, correlation_glyph)
+        target = plot.add_glyph(source, target_glyph)
+        hedge = plot.add_glyph(source, hedge_glyph)
+        # Add the tools
+        tooltips = [
+            ("Correlation", "@Correlation"),
+            ("Target", "@Target"),
+            ("Hedge", "@Hedge")
+        ]
+        correlation_hover_tool = HoverTool(renderers=[correlation], tooltips=tooltips)
+        target_hover_tool = HoverTool(renderers=[target], tooltips=tooltips)
+        hedge_hover_tool = HoverTool(renderers=[hedge], tooltips=tooltips)
+        select_tool = BoxSelectTool(renderers=[target, hedge, correlation], dimensions='width')
+        plot.add_tools(target_hover_tool, hedge_hover_tool, correlation_hover_tool, select_tool)
+        layout = Column(plot, data_table)
+        the_doc = Document()
+        the_doc.add_root(layout)
+        return the_doc
 
-# Add Glyphs
-cty_glyph = Circle(x="index", y="cty", fill_color="#396285", size=8, fill_alpha=0.5, line_alpha=0.5)
-hwy_glyph = Circle(x="index", y="hwy", fill_color="#CE603D", size=8, fill_alpha=0.5, line_alpha=0.5)
-cty = plot.add_glyph(source, cty_glyph)
-hwy = plot.add_glyph(source, hwy_glyph)
+    @staticmethod
+    def make_example_datatable():
+        source = ColumnDataSource(mpg)
+        print(source.column_names)
+        manufacturers = sorted(mpg["manufacturer"].unique())
+        models = sorted(mpg["model"].unique())
+        transmissions = sorted(mpg["trans"].unique())
+        drives = sorted(mpg["drv"].unique())
+        classes = sorted(mpg["class"].unique())
 
-# Add the tools
-tooltips = [
-    ("Manufacturer", "@manufacturer"),
-    ("Model", "@model"),
-    ("Displacement", "@displ"),
-    ("Year", "@year"),
-    ("Cylinders", "@cyl"),
-    ("Transmission", "@trans"),
-    ("Drive", "@drv"),
-    ("Class", "@class"),
-]
-cty_hover_tool = HoverTool(renderers=[cty], tooltips=tooltips + [("City MPG", "@cty")])
-hwy_hover_tool = HoverTool(renderers=[hwy], tooltips=tooltips + [("Highway MPG", "@hwy")])
-select_tool = BoxSelectTool(renderers=[cty, hwy], dimensions='width')
-plot.add_tools(cty_hover_tool, hwy_hover_tool, select_tool)
+        columns = [
+            TableColumn(field="manufacturer", title="Manufacturer", editor=SelectEditor(options=manufacturers),
+                        formatter=StringFormatter(font_style="bold")),
+            TableColumn(field="model", title="Model", editor=StringEditor(completions=models)),
+            TableColumn(field="displ", title="Displacement", editor=NumberEditor(step=0.1),
+                        formatter=NumberFormatter(format="0.0")),
+            TableColumn(field="year", title="Year", editor=IntEditor()),
+            TableColumn(field="cyl", title="Cylinders", editor=IntEditor()),
+            TableColumn(field="trans", title="Transmission", editor=SelectEditor(options=transmissions)),
+            TableColumn(field="drv", title="Drive", editor=SelectEditor(options=drives)),
+            TableColumn(field="class", title="Class", editor=SelectEditor(options=classes)),
+            TableColumn(field="cty", title="City MPG", editor=IntEditor()),
+            TableColumn(field="hwy", title="Highway MPG", editor=IntEditor()),
+        ]
+        data_table = DataTable(source=source, columns=columns, editable=True, width=1000)
+        plot = Plot(title=None, x_range=DataRange1d(), y_range=DataRange1d(), plot_width=1000, plot_height=300)
+        # Set up x & y axis
+        plot.add_layout(LinearAxis(), 'below')
+        yaxis = LinearAxis()
+        plot.add_layout(yaxis, 'left')
+        plot.add_layout(Grid(dimension=1, ticker=yaxis.ticker))
 
-layout = Column(plot, data_table)
+        # Add Glyphs
+        cty_glyph = Circle(x="index", y="cty", fill_color="#396285", size=8, fill_alpha=0.5, line_alpha=0.5)
+        hwy_glyph = Circle(x="index", y="hwy", fill_color="#CE603D", size=8, fill_alpha=0.5, line_alpha=0.5)
+        cty = plot.add_glyph(source, cty_glyph)
+        hwy = plot.add_glyph(source, hwy_glyph)
 
-doc = Document()
-doc.add_root(layout)
+        # Add the tools
+        tooltips = [
+            ("Manufacturer", "@manufacturer"),
+            ("Model", "@model"),
+            ("Displacement", "@displ"),
+            ("Year", "@year"),
+            ("Cylinders", "@cyl"),
+            ("Transmission", "@trans"),
+            ("Drive", "@drv"),
+            ("Class", "@class"),
+        ]
+        cty_hover_tool = HoverTool(renderers=[cty], tooltips=tooltips + [("City MPG", "@cty")])
+        hwy_hover_tool = HoverTool(renderers=[hwy], tooltips=tooltips + [("Highway MPG", "@hwy")])
+        select_tool = BoxSelectTool(renderers=[cty, hwy], dimensions='width')
+        plot.add_tools(cty_hover_tool, hwy_hover_tool, select_tool)
+        layout = Column(plot, data_table)
+        doc = Document()
+        doc.add_root(layout)
+        return doc
+
+    @staticmethod
+    def validate_show_document(html_document, html_filename, html_dir, viewHtml=False):
+        print(html_document)
+        html_document.validate()
+        proper_dir = OSMuxImpl.get_proper_path(html_dir)
+        proper_filename = proper_dir + html_filename
+        with open(proper_filename, "w") as f:
+            f.write(file_html(html_document, INLINE, "Data Tables"))
+        LOGGER.info("extend_bokeh_datatables.ExtendBokeh.validate_show_document(): wrote %s in dir %s ",
+                    html_filename, proper_dir)
+        if viewHtml is not False:
+            view(proper_filename)
+
 
 if __name__ == "__main__":
+    doc = ExtendDataTable.make_example_datatable()
     doc.validate()
-    filename = "/Users/traderghazy/workspace/data/bokeh/html/data_tables.html"
+    dir_name = "workspace/data/bokeh/html/"
+    filename = OSMuxImpl.get_proper_path(dir_name) + "data_tables.html"
     with open(filename, "w") as f:
         f.write(file_html(doc, INLINE, "Data Tables"))
     print("Wrote %s" % filename)

@@ -13,8 +13,8 @@ https://sites.google.com/a/chromium.org/chromedriver/getting-started
 http://stanford.edu/~mgorkove/cgi-bin/rpython_tutorials/Scraping_a_Webpage_Rendered_by_Javascript_Using_Python.php
 """
 
-class SimFinApi:
 
+class SimFinApi:
     INDICATOR_ID_URL = 'https://simfin.com/data/help/main?topic=api-indicators'
     SECTOR_INDUSTRY_URL = 'https://simfin.com/data/help/main?topic=industry-classification'
 
@@ -37,7 +37,7 @@ class SimFinApi:
     def get_simfin_indicator_ids(self):
 
         simfin_ind_id_list_url = SimFinApi.INDICATOR_ID_URL
-        simfin_ind_id_html_content = self.simfin_selenium_connect(request_url = simfin_ind_id_list_url)
+        simfin_ind_id_html_content = self.simfin_selenium_connect(request_url=simfin_ind_id_list_url)
         try:
             html_obj = pd.read_html(simfin_ind_id_html_content)
         except HTTPError as httperror:
@@ -99,7 +99,7 @@ class SimFinApi:
     def get_writer(self,
                    filename):
 
-        return pd.ExcelWriter(filename, engine = 'xlsxwriter')
+        return pd.ExcelWriter(filename, engine='xlsxwriter')
 
     def writer_save(self,
                     writer):
@@ -117,7 +117,7 @@ class SimFinApi:
         request_url = f'https://simfin.com/api/v1/companies/id/{sim_id}/ratios?api-key={self.api_key}'
         content = requests.get(request_url)
         all_ratios = content.json()
-        return (all_ratios) # list of dictionaries (i.e json)
+        return (all_ratios)  # list of dictionaries (i.e json)
 
     def get_single_ratio(self,
                          sim_id,
@@ -125,7 +125,7 @@ class SimFinApi:
 
         request_url = f'https://simfin.com/api/v1/companies/id/{sim_id}/ratios?indicators={ind_id}&api-key={self.api_key}'
         content = requests.get(request_url)
-        ratio= content.json()
+        ratio = content.json()
         return (ratio)
 
     def get_co_fiscal_year_end(self,
@@ -217,7 +217,7 @@ class SimFinApi:
         try:
             co_founding_year_dict = content.json()[0]
         except IndexError:
-            print ("content.json() is ",content.json())
+            print("content.json() is ", content.json())
             try:
                 error_msg = content.json()['error']
             except KeyError:
@@ -298,11 +298,11 @@ class SimFinApi:
     def get_co_mkt_cap(self,
                        sim_id):
 
-        ind_id =  '4-11'
+        ind_id = '4-11'
         indicatorName, co_mkt_cap = ("", "")
 
         request_url = f'https://simfin.com/api/v1/companies/id/{sim_id}/' \
-            f'ratios?indicators={ind_id}&api-key={self.api_key}'
+                      f'ratios?indicators={ind_id}&api-key={self.api_key}'
         self.logger.info("SimFinApi.get_co_mkt_cap(): request url is %s", request_url)
         content = requests.get(request_url)
         try:
@@ -324,13 +324,13 @@ class SimFinApi:
             return
 
     def get_co_common_shares_outstanding(self,
-                                          sim_id):
+                                         sim_id):
 
         ind_id = '0-64'
         indicatorName, co_common_shares_outstanding, value_as_of_date = ("", "", "")
 
         request_url = f'https://simfin.com/api/v1/companies/id/{sim_id}/' \
-            f'ratios?indicators={ind_id}&api-key={self.api_key}'
+                      f'ratios?indicators={ind_id}&api-key={self.api_key}'
         self.logger.info("SimFinApi.get_co_common_shares_outstanding(): request url is %s", request_url)
         content = requests.get(request_url)
         try:
@@ -360,7 +360,7 @@ class SimFinApi:
         indicatorName, co_preferred_shares_outstanding, value_as_of_date = ("", "", "")
 
         request_url = f'https://simfin.com/api/v1/companies/id/{sim_id}/' \
-            f'ratios?indicators={ind_id}&api-key={self.api_key}'
+                      f'ratios?indicators={ind_id}&api-key={self.api_key}'
         self.logger.info("SimFinApi.get_co_preferred_shares_outstanding(): request url is %s", request_url)
         content = requests.get(request_url)
         try:
@@ -390,7 +390,7 @@ class SimFinApi:
         indicatorName, co_avg_shares_outstanding_basic, period, fiscal_year, value_as_of_date = \
             ("", "", "", "", "")
         request_url = f'https://simfin.com/api/v1/companies/id/{sim_id}/' \
-            f'ratios?indicators={ind_id}&api-key={self.api_key}'
+                      f'ratios?indicators={ind_id}&api-key={self.api_key}'
         self.logger.info("SimFinApi.get_co_avg_shares_outstanding_basic(): request url is %s", request_url)
         content = requests.get(request_url)
         data_dict = content.json()[0]
@@ -426,7 +426,7 @@ class SimFinApi:
         indicatorName, co_avg_shares_outstanding_diluted, period, fiscal_year, value_as_of_date = \
             ("", "", "", "", "")
         request_url = f'https://simfin.com/api/v1/companies/id/{sim_id}/' \
-            f'ratios?indicators={ind_id}&api-key={self.api_key}'
+                      f'ratios?indicators={ind_id}&api-key={self.api_key}'
         self.logger.info("SimFinApi.get_co_avg_shares_outstanding_diluted(): request url is %s", request_url)
         content = requests.get(request_url)
         try:
@@ -460,7 +460,7 @@ class SimFinApi:
         indicatorName, revenues, period, fiscal_year, currency, value_as_of_date = \
             ("", "", "", "", "", "")
         request_url = f'https://simfin.com/api/v1/companies/id/{sim_id}/' \
-            f'ratios?indicators={ind_id}&api-key={self.api_key}'
+                      f'ratios?indicators={ind_id}&api-key={self.api_key}'
         self.logger.info("SimFinApi.get_co_avg_revenues(): request url is %s", request_url)
         content = requests.get(request_url)
 
@@ -497,7 +497,7 @@ class SimFinApi:
         indicatorName, cogs, period, fiscal_year, currency, value_as_of_date = \
             ("", "", "", "", "", "")
         request_url = f'https://simfin.com/api/v1/companies/id/{sim_id}/' \
-            f'ratios?indicators={ind_id}&api-key={self.api_key}'
+                      f'ratios?indicators={ind_id}&api-key={self.api_key}'
         self.logger.info("SimFinApi.get_co_cost_of_goods_sold(): request url is %s", request_url)
         content = requests.get(request_url)
         try:
@@ -533,7 +533,7 @@ class SimFinApi:
         indicatorName, gross_profit, period, fiscal_year, currency, value_as_of_date = \
             ("", "", "", "", "", "")
         request_url = f'https://simfin.com/api/v1/companies/id/{sim_id}/' \
-            f'ratios?indicators={ind_id}&api-key={self.api_key}'
+                      f'ratios?indicators={ind_id}&api-key={self.api_key}'
         self.logger.info("SimFinApi.get_co_gross_profit(): request url is %s", request_url)
         content = requests.get(request_url)
 
@@ -570,7 +570,7 @@ class SimFinApi:
         indicatorName, operating_expenses, period, fiscal_year, currency, value_as_of_date = \
             ("", "", "", "", "", "")
         request_url = f'https://simfin.com/api/v1/companies/id/{sim_id}/' \
-            f'ratios?indicators={ind_id}&api-key={self.api_key}'
+                      f'ratios?indicators={ind_id}&api-key={self.api_key}'
         self.logger.info("SimFinApi.get_co_operating_expenses(): request url is %s", request_url)
         content = requests.get(request_url)
 
@@ -610,7 +610,7 @@ class SimFinApi:
         indicatorId, indicatorName, value, period, fyear, currency, period_end_date = \
             ("", "", "", "", "", "", "")
         request_url = f'https://simfin.com/api/v1/companies/id/{sim_id}/' \
-            f'ratios?indicators={ind_id}&api-key={self.api_key}'
+                      f'ratios?indicators={ind_id}&api-key={self.api_key}'
         self.logger.info("SimFinApi.get_co_indicator(): request url is %s", request_url)
         content = requests.get(request_url)
 
@@ -646,53 +646,53 @@ class SimFinApi:
 
         # get quarter by quarter eps, instead of TTM
         # TTM = trailing 12 month <insert stat i.e. eps>
-        data = { "search": [ {'indicatorId': "4-12",
-                              'meta': [ { 'id': 6,
-                                          'value': 'TTM',
-                                          'operator': 'eq'},]}],
-                 "simIdList": [
-                     111052
-                 ]
-                 }
+        data = {"search": [{'indicatorId': "4-12",
+                            'meta': [{'id': 6,
+                                      'value': 'TTM',
+                                      'operator': 'eq'}, ]}],
+                "simIdList": [
+                    111052
+                ]
+                }
         request_url = f'https://simfin.com/api/v1/'
         request_url = f'https://simfin.com/api/v1/finder?api-key={self.api_key}'
         r = requests.post(request_url, json=data)
-        print (r.content)
+        print(r.content)
 
     def get_eps(self):
 
-        data = { "search": [ { "indicatorId": "4-12",
-                                "meta": [ { "id": 6,
-                                            "value": "TTM",
-                                            "operator": "eq"
-                                            },
-                                          ],
+        data = {"search": [{"indicatorId": "4-12",
+                            "meta": [{"id": 6,
+                                      "value": "TTM",
+                                      "operator": "eq"
+                                      },
+                                     ],
                             },
-                {
-                    "indicatorId": "4-12",
-                    "meta": [
-                        {
-                            "id": 6,
-                            "value": "TTM-1",
-                            "operator": "eq"
-                        },
-                    ],
-                },
-                {
-                    "indicatorId": "4-12",
-                    "meta": [
-                        {
-                            "id": 6,
-                            "value": "TTM-2",
-                            "operator": "eq"
-                        },
-                    ],
+                           {
+                               "indicatorId": "4-12",
+                               "meta": [
+                                   {
+                                       "id": 6,
+                                       "value": "TTM-1",
+                                       "operator": "eq"
+                                   },
+                               ],
+                           },
+                           {
+                               "indicatorId": "4-12",
+                               "meta": [
+                                   {
+                                       "id": 6,
+                                       "value": "TTM-2",
+                                       "operator": "eq"
+                                   },
+                               ],
+                           }
+                           ],
+                "simIdList": [
+                    111052
+                ]
                 }
-            ],
-            "simIdList": [
-                111052
-            ]
-        }
         request_url = f'https://simfin.com/api/v1/finder?api-key={self.api_key}'
         r = requests.post(request_url, json=data)
         print(r.content)
@@ -715,7 +715,7 @@ class SimFinApi:
                         if period_identifier not in d:
                             d[period_identifier] = []
                         request_url = f'https://simfin.com/api/v1/companies/id/{sim_id}/statements/standardised?stype=' \
-                            f'{statement_type}&fyear={year}&ptype={time_period}&api-key={self.api_key}'
+                                      f'{statement_type}&fyear={year}&ptype={time_period}&api-key={self.api_key}'
                         self.logger.info("SimFinApi.get_data(): request_url is %s", request_url)
                         content = requests.get(request_url)
                         statement_data = content.json()
@@ -744,7 +744,7 @@ class SimFinApi:
 
 
 tickers = ['AAPL', 'NVDA', 'WMT']
-#tickers = ['HD', 'JPM', 'BA']
+# tickers = ['HD', 'JPM', 'BA']
 sf = SimFinApi(tickers)
 statement_type = "pl"
 time_periods = ['Q1', 'Q2', 'Q3', 'Q4']
@@ -752,39 +752,39 @@ year_start = 2010
 year_end = 2018
 output_file = 'simfin_data.xlsx'
 
-#sf.get_quarterly_eps()
+# sf.get_quarterly_eps()
 
-#sim_ids = sf.get_sim_ids(tickers)
-#sf.get_data(sim_ids=sim_ids,
+# sim_ids = sf.get_sim_ids(tickers)
+# sf.get_data(sim_ids=sim_ids,
 #            statement_type=statement_type,
 #            time_periods=time_periods,
 #            year_start=year_start,
 #            year_end=year_end,
 #            output_file=output_file)
 
-#df = sf.get_simfin_indicator_ids()
-#sf.get_all_ratios(111052)
+# df = sf.get_simfin_indicator_ids()
+# sf.get_all_ratios(111052)
 
-#request_url = f'https://simfin.com/api/v1/companies/id/111052/statements/standardised?stype=' \
+# request_url = f'https://simfin.com/api/v1/companies/id/111052/statements/standardised?stype=' \
 #    f'{statement_type}&fyear=2010&ptype=Q1&api-key={sf.api_key}'
-#content = requests.get(request_url)
-#print (content.json())
-#print (content.content)
-#request_url = f'https://simfin.com/api/v1/companies/id/111052/ratios?api-key={sf.api_key}'
-#content = requests.get(request_url)
-#print (content.json())
-#print (content.content)
-#co_founding_year_tuple = sf.get_co_founding_year(111052)
-#print (co_founding_year_tuple)
-#num_emps = sf.get_co_num_emps(111052)
-#print (num_emps)
-#co_mkt_cap = sf.get_co_mkt_cap(111052)
-#sf.get_co_preferred_shares_outstanding(239962)
+# content = requests.get(request_url)
+# print (content.json())
+# print (content.content)
+# request_url = f'https://simfin.com/api/v1/companies/id/111052/ratios?api-key={sf.api_key}'
+# content = requests.get(request_url)
+# print (content.json())
+# print (content.content)
+# co_founding_year_tuple = sf.get_co_founding_year(111052)
+# print (co_founding_year_tuple)
+# num_emps = sf.get_co_num_emps(111052)
+# print (num_emps)
+# co_mkt_cap = sf.get_co_mkt_cap(111052)
+# sf.get_co_preferred_shares_outstanding(239962)
 print(sf.get_co_avg_shares_outstanding_diluted(111052))
-print (sf.get_co_revenues(111052))
-print (sf.get_co_cost_of_goods_sold(111052))
-print (sf.get_co_gross_profit(111052))
-print (sf.get_co_operating_expenses(111052))
-print (sf.get_co_indicator(111052))
-print (sf.get_co_fiscal_year_end(111052))
-print (sf.get_co_sector_code(111052))
+print(sf.get_co_revenues(111052))
+print(sf.get_co_cost_of_goods_sold(111052))
+print(sf.get_co_gross_profit(111052))
+print(sf.get_co_operating_expenses(111052))
+print(sf.get_co_indicator(111052))
+print(sf.get_co_fiscal_year_end(111052))
+print(sf.get_co_sector_code(111052))

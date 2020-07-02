@@ -50,7 +50,7 @@ class QuandlDataObject(DataObject):
         self.quandl_symbol = self.qsi.get_quandl_symbol(class_of_data,
                                                         local_symbol)
         
-        self.local_data_file_pwd =  OSMuxImpl.get_proper_path(self.qsi.get_local_quandl_data_path(class_of_data))
+        self.local_data_file_pwd = OSMuxImpl.get_proper_path(self.qsi.get_local_quandl_data_path(class_of_data))
         self.logger.info("QuandlDataObject.__init__.local_data_file_pwd " + self.local_data_file_pwd)
         self.local_data_file_name = local_symbol + self.local_file_type
         self.newest_date_at_quandl_dt = None
@@ -191,10 +191,8 @@ class QuandlDataObject(DataObject):
             todays_date = datetime.now()
             a = todays_date > self.get_last_time_file_modified()
         return a
-            
-        
+
     def update_csv_file(self):
-        
         return self.get_from_quandl()
     
     

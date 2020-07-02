@@ -21,7 +21,7 @@ class OSMuxImpl(object):
             self.home_dir = os.environ['HOMEPATH']
         else:
             self.home_dir = os.environ['HOME']
-        logger.info('OSMuxImpl.__init__.home_dir: ' + self.home_dir)
+        self.logger.info('OSMuxImpl.__init__.home_dir: ' + self.home_dir)
     
     @staticmethod  
     def get_program_user_username():
@@ -69,12 +69,3 @@ class OSMuxImpl(object):
             return_path += (OSMuxImpl.get_dir_div() + token)
         return_path += OSMuxImpl.get_dir_div()
         return return_path
-        
-        
-            
-        
-        
-            
-        
-        
-        

@@ -1,19 +1,31 @@
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from root.nested.SysOs.os_mux import OSMuxImpl
 from root.nested import get_logger
+from root.nested.SysOs.os_mux import OSMuxImpl
+import os
+from datetime import datetime, timedelta
+import pandas as pd
 
 """ Reference Site : 
 https://www.twilio.com/blog/2017/02/an-easy-way-to-read-and-write-to-a-google-spreadsheet-in-python.html
 """
 
-class SecureKeysAccess:
 
+class SecureKeysAccess:
     SCOPE = ['https://spreadsheets.google.com/feeds',
              'https://www.googleapis.com/auth/drive',
              'https://www.googleapis.com/auth/drive.file',
              'https://www.googleapis.com/auth/drive.appdata',
              'https://www.googleapis.com/auth/drive.apps.readonly']
+    CACHED_INFO_DIR = "/workspace/data/cachedinfo/"
+    MYSQL_CACHED_INFO_FILE = "mysql_server.csv"
+    VENDOR_KEYS_FILE = "vendor_api_keys.csv"
+    CACHED_INFO_SWITCHER = {
+        "mysql_server_ip": OSMuxImpl.get_proper_path(CACHED_INFO_DIR) + MYSQL_CACHED_INFO_FILE,
+        "mysql_server_user": OSMuxImpl.get_proper_path(CACHED_INFO_DIR) + MYSQL_CACHED_INFO_FILE,
+        "mysql_server_secret": OSMuxImpl.get_proper_path(CACHED_INFO_DIR) + MYSQL_CACHED_INFO_FILE,
+        "vendor_api_keys": OSMuxImpl.get_proper_path(CACHED_INFO_DIR) + VENDOR_KEYS_FILE
+    }
     LOGGER = get_logger()
 
     def __init__(self):
@@ -41,24 +53,38 @@ class SecureKeysAccess:
 
         self.logger.info("SecureKeysAccess.open_google_sheet: sheetFileName is %s", sheetFileName)
         sheet = authorized_client.open(sheetFileName).sheet1
-        return (sheet)
+        return sheet
 
     def get_sheet_records(self,
                           sheet):
 
         list_of_hashes = sheet.get_all_records()
-        print (list_of_hashes[0])
-        print (list_of_hashes)
+        return list_of_hashes
+
+    def get_access_key(self,
+                       sheet,
+                       vendor_name):
+
+        list_of_hashes = sheet.get_all_records()
+        for hasher in list_of_hashes:
+            if hasher['Vendor'] == vendor_name:
+                url = hasher['Url']
+                username = hasher['Username']
+                secret = hasher['Secret']
+                return url, username, secret
+        self.logger.error("SecureKeysAccess.get_access_key(): input vendor_name %s not found in access_keys",
+                          vendor_name)
 
     def get_vendor_api_key(self,
                            sheet,
                            vendor_name):
 
         list_of_hashes = sheet.get_all_records()
-        for hash in list_of_hashes:
-            if hash['Vendor'] == vendor_name:
-                return hash['API_KEY']
-        self.logger.error("SecureKeysAccess.get_vendor_api_key(): input vendor_name %s not found in api_keys!", vendor_name)
+        for hasher in list_of_hashes:
+            if hasher['Vendor'] == vendor_name:
+                return hasher['API_KEY']
+        self.logger.error("SecureKeysAccess.get_vendor_api_key(): input vendor_name %s not found in api_keys!",
+                          vendor_name)
 
     @staticmethod
     def get_ticker_simid_static(ticker):
@@ -79,20 +105,111 @@ class SecureKeysAccess:
 
     @staticmethod
     def get_vendor_api_key_static(vendor):
+        cached_vendor_api_key = SecureKeysAccess.check_cached_info(info_type="vendor_api_keys", info_field=vendor)
+        if cached_vendor_api_key is None:
+            google_api_filesdir = '/workspace/data/googleapi/'
+            local_data_file_pwd = OSMuxImpl.get_proper_path(google_api_filesdir)
+            google_api_creds_file = local_data_file_pwd + "google_driveAccess_client_secrets.json"
+            google_api_creds = ServiceAccountCredentials.from_json_keyfile_name(google_api_creds_file,
+                                                                                SecureKeysAccess.SCOPE)
+            client = gspread.authorize(google_api_creds)
+            sheet_filename = "ghazy_mahjub_api_keys.csv"
+            api_key_sheet = client.open(sheet_filename).sheet1
+            list_of_hashes = api_key_sheet.get_all_records()
+            for hasher in list_of_hashes:
+                if hasher['Vendor'] == vendor:
+                    return hasher['API_KEY']
+            return ""
+        return cached_vendor_api_key
 
+    @staticmethod
+    def __get_mysql_info_object():
         google_api_filesdir = '/workspace/data/googleapi/'
         local_data_file_pwd = OSMuxImpl.get_proper_path(google_api_filesdir)
         google_api_creds_file = local_data_file_pwd + "google_driveAccess_client_secrets.json"
         google_api_creds = ServiceAccountCredentials.from_json_keyfile_name(google_api_creds_file,
                                                                             SecureKeysAccess.SCOPE)
         client = gspread.authorize(google_api_creds)
-        sheet_filename = "ghazy_mahjub_api_keys.csv"
-        api_key_sheet = client.open(sheet_filename).sheet1
-        list_of_hashes = api_key_sheet.get_all_records()
-        for hash in list_of_hashes:
-            if hash['Vendor'] == vendor:
-                return hash['API_KEY']
-        return ""
+        sheet_filename = "mysql_server.csv"
+        return client, sheet_filename
+
+    @staticmethod
+    def get_mysql_server_hostname():
+
+        client, sheet_filename = SecureKeysAccess.__get_mysql_info_object()
+        mysql_info_sheet = client.open(sheet_filename).sheet1
+        list_of_hashes = mysql_info_sheet.get_all_values()
+        for hasher in list_of_hashes:
+            if hasher[0] == 'Hostname':
+                return hasher[1]
+
+    @staticmethod
+    def check_cached_info(info_type, info_field):
+        info_file = SecureKeysAccess.CACHED_INFO_SWITCHER[info_type]
+        last_modified_time = datetime.fromtimestamp(os.path.getmtime(info_file))
+        return_info = None
+        if last_modified_time - datetime.now() < timedelta(days=30):
+            df = pd.read_csv(filepath_or_buffer=info_file, index_col=0, header=None)
+            df.index.name = 'Name'
+            df.columns = [['Value']]
+            return_info = df.loc[info_field]['Value'][0]
+        return return_info
+
+    @staticmethod
+    def get_mysql_server_ip():
+        cached_server_ip = SecureKeysAccess.check_cached_info("mysql_server_ip", 'LAN IP')
+        if cached_server_ip is None:
+            client, sheet_filename = SecureKeysAccess.__get_mysql_info_object()
+            mysql_info_sheet = client.open(sheet_filename).sheet1
+            list_of_hashes = mysql_info_sheet.get_all_values()
+            for hasher in list_of_hashes:
+                if hasher[0] == 'LAN IP':
+                    return hasher[1]
+        return cached_server_ip
+
+    @staticmethod
+    def get_mysql_server_user():
+        cached_server_user = SecureKeysAccess.check_cached_info("mysql_server_user", "sftp_username_python")
+        if cached_server_user is None:
+            client, sheet_filename = SecureKeysAccess.__get_mysql_info_object()
+            mysql_info_sheet = client.open(sheet_filename).sheet1
+            list_of_hashes = mysql_info_sheet.get_all_values()
+            for hasher in list_of_hashes:
+                if hasher[0] == 'sftp_username_python':
+                    return hasher[1]
+        return cached_server_user
+
+    @staticmethod
+    def get_mysql_server_secret():
+        cached_server_secret = SecureKeysAccess.check_cached_info("mysql_server_secret", "sftp_secret_python")
+        if cached_server_secret is None:
+            client, sheet_filename = SecureKeysAccess.__get_mysql_info_object()
+            mysql_info_sheet = client.open(sheet_filename).sheet1
+            list_of_hashes = mysql_info_sheet.get_all_values()
+            for hasher in list_of_hashes:
+                if hasher[0] == 'sftp_secret_python':
+                    return hasher[1]
+        return cached_server_secret
+
+    @staticmethod
+    def get_mysql_win_uploads_dir():
+
+        client, sheet_filename = SecureKeysAccess.__get_mysql_info_object()
+        mysql_info_sheet = client.open(sheet_filename).sheet1
+        list_of_hashes = mysql_info_sheet.get_all_values()
+        for hasher in list_of_hashes:
+            if hasher[0] == 'mysql_win_uploads_dir':
+                return hasher[1]
+
+    @staticmethod
+    def get_mysql_win_uploads_dir_str():
+
+        client, sheet_filename = SecureKeysAccess.__get_mysql_info_object()
+        mysql_info_sheet = client.open(sheet_filename).sheet1
+        list_of_hashes = mysql_info_sheet.get_all_values()
+        for hasher in list_of_hashes:
+            if hasher[0] == 'mysql_win_uploads_dir_str':
+                return hasher[1]
 
     @staticmethod
     def insert_simid(ticker, simid):
@@ -173,7 +290,7 @@ class SecureKeysAccess:
                                                   "found it in column number %s, aborting!",
                                                   vendor, str(cell.col))
                 else:
-                    api_key_sheet.update_cell(cell.row, cell.col+1, api_key)
+                    api_key_sheet.update_cell(cell.row, cell.col + 1, api_key)
                     SecureKeysAccess.LOGGER.info('updated vendor %s with new api_key %s',
                                                  vendor, api_key)
             else:
@@ -206,7 +323,7 @@ class SecureKeysAccess:
 
 
 if __name__ == '__main__':
-
-    SecureKeysAccess.insert_api_key('IBKR', "fuck off")
-    SecureKeysAccess.update_api_key("IBKR", "dgh78_98!")
-    SecureKeysAccess.delete_vendor('IBKR')
+    ska = SecureKeysAccess()
+    hostname = SecureKeysAccess.get_mysql_server_hostname()
+    uploads_dir = SecureKeysAccess.get_mysql_win_uploads_dir()
+    ska.logger.info("Testing SecureKeysAccess: uploads dir is %s", uploads_dir)
