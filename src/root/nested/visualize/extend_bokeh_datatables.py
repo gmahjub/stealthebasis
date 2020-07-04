@@ -125,11 +125,10 @@ class ExtendDataTable:
 
     @staticmethod
     def validate_show_document(html_document, html_filename, html_dir, viewHtml=False):
-        print(html_document)
         html_document.validate()
         proper_dir = OSMuxImpl.get_proper_path(html_dir)
         proper_filename = proper_dir + html_filename
-        with open(proper_filename, "w") as f:
+        with open(proper_filename, "w", encoding='utf-8') as f:
             f.write(file_html(html_document, INLINE, "Data Tables"))
         LOGGER.info("extend_bokeh_datatables.ExtendBokeh.validate_show_document(): wrote %s in dir %s ",
                     html_filename, proper_dir)
@@ -142,7 +141,7 @@ if __name__ == "__main__":
     doc.validate()
     dir_name = "workspace/data/bokeh/html/"
     filename = OSMuxImpl.get_proper_path(dir_name) + "data_tables.html"
-    with open(filename, "w") as f:
+    with open(filename, "w", encoding='utf-8') as f:
         f.write(file_html(doc, INLINE, "Data Tables"))
     print("Wrote %s" % filename)
     view(filename)

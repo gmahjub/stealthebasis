@@ -5,13 +5,14 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{6b736b05-1a6c-477e-977e-44db7b7e0b59}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>src\root\nested\indicators\track_stat_mom_proj.py</StartupFile>
-    <SearchPath>src</SearchPath>
+    <StartupFile>src\root\nested\dataAccess\tiingo_data_object.py</StartupFile>
+    <SearchPath>src;..\..\Miniconda3\envs\GhazyBase1;src\root\nested\BokehServe;src</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <InterpreterId />
+    <InterpreterId>CondaEnv|CondaEnv|GhazyBase1</InterpreterId>
+    <TestFramework>Pytest</TestFramework>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
   <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
@@ -19,10 +20,15 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="src\root\nested\BokehServe\BokehServeStealBasis\os_mux.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\root\nested\customLogging\custom_logging.py" />
     <Compile Include="src\root\nested\dataAccess\data_access_test_cases.py" />
     <Compile Include="src\root\nested\dataAccess\data_object.py" />
     <Compile Include="src\root\nested\dataAccess\data_provider_interface.py" />
+    <Compile Include="src\root\nested\dataAccess\ExcelDataAccess\cbo_excel_api.py" />
+    <Compile Include="src\root\nested\dataAccess\ExcelDataAccess\__init__.py" />
     <Compile Include="src\root\nested\dataAccess\multi_dataframe_analysis.py">
       <SubType>Code</SubType>
     </Compile>
@@ -31,17 +37,27 @@
     <Compile Include="src\root\nested\dataAccess\scrape_analyst_actions_briefing_com.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\root\nested\dataAccess\secure_keys_access.py" />
     <Compile Include="src\root\nested\dataAccess\tiingo_data_object.py" />
+    <Compile Include="src\root\nested\dataAccess\WebApi\cboe.py" />
+    <Compile Include="src\root\nested\dataAccess\WebApi\fred_api.py" />
     <Compile Include="src\root\nested\dataAccess\WebApi\ibkr_api.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="src\root\nested\dataAccess\WebApi\iex_trading_api.py" />
+    <Compile Include="src\root\nested\dataAccess\WebApi\morningstar_api.py" />
     <Compile Include="src\root\nested\dataAccess\WebApi\omdb.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\root\nested\dataAccess\WebApi\shares_outstanding_history.py" />
+    <Compile Include="src\root\nested\dataAccess\WebApi\simfin_api.py" />
+    <Compile Include="src\root\nested\dataAccess\WebApi\TreasuryGov\nominal_yield_curve.py" />
+    <Compile Include="src\root\nested\dataAccess\WebApi\TreasuryGov\real_yield_curve.py" />
+    <Compile Include="src\root\nested\dataAccess\WebApi\TreasuryGov\__init__.py" />
     <Compile Include="src\root\nested\dataAccess\WebApi\twitter.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\root\nested\dataAccess\WebApi\yahoo_earnings_calendar.py" />
     <Compile Include="src\root\nested\dataAccess\WebApi\__init__.py">
       <SubType>Code</SubType>
     </Compile>
@@ -52,18 +68,37 @@
     <Compile Include="src\root\nested\futures\cont_fut.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\root\nested\futures\run_eod.py" />
+    <Compile Include="src\root\nested\indicators\cointegrated_pairs.py" />
+    <Compile Include="src\root\nested\indicators\create_stock_index.py" />
     <Compile Include="src\root\nested\indicators\gdp_comparator.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\root\nested\indicators\momentum_hurst.py" />
     <Compile Include="src\root\nested\indicators\price_denomination.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\root\nested\indicators\TechnicalAnalysis\dpo.py" />
+    <Compile Include="src\root\nested\indicators\TechnicalAnalysis\__init__.py" />
     <Compile Include="src\root\nested\indicators\track_stat_mom_proj.py" />
+    <Compile Include="src\root\nested\indicators\yield_curve_risk_pricer.py" />
     <Compile Include="src\root\nested\indicators\__init__.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="src\root\nested\interestRateModeling\interest_rates.py" />
     <Compile Include="src\root\nested\interestRateModeling\test_yield_curve.py" />
+    <Compile Include="src\root\nested\BokehServe\BokehServeStealBasis\app_hooks.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\root\nested\BokehServe\BokehServeStealBasis\main.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\root\nested\BokehServe\BokehServeStealBasis\__init__.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\root\nested\BokehServe\__init__.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\root\nested\performance_analyzer.py" />
     <Compile Include="src\root\nested\statisticalAnalysis\ecdf.py">
       <SubType>Code</SubType>
@@ -78,14 +113,19 @@
     <Compile Include="src\root\nested\statisticalAnalysis\__init__.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\root\nested\stocks\bokeh_iex_stock_streamer.py" />
     <Compile Include="src\root\nested\stocks\historical_bar_data.py" />
     <Compile Include="src\root\nested\stocks\__init__.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\root\nested\SupervisedLearning\arima_stocks.py" />
+    <Compile Include="src\root\nested\SupervisedLearning\linear_regress_stock.py" />
+    <Compile Include="src\root\nested\SupervisedLearning\__init__.py" />
     <Compile Include="src\root\nested\SysOs\os_mux.py" />
     <Compile Include="src\root\nested\SysOs\__init__.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\root\nested\timeSeriesAnalysis\basic_tsa.py" />
     <Compile Include="src\root\nested\timeSeriesAnalysis\extendARIMA\arima_module.py" />
     <Compile Include="src\root\nested\timeSeriesAnalysis\extendARIMA\test.py" />
     <Compile Include="src\root\nested\timeSeriesAnalysis\extendProphet\prophet_forecaster.py" />
@@ -100,9 +140,13 @@
     <Compile Include="src\root\nested\visualize\extend_bokeh.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\root\nested\visualize\extend_bokeh_customjs.py" />
+    <Compile Include="src\root\nested\visualize\extend_bokeh_datatables.py" />
     <Compile Include="src\root\nested\visualize\extend_bokeh_server.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="src\root\nested\visualize\extend_bokeh_server_datatables.py" />
+    <Compile Include="src\root\nested\visualize\extend_bokeh_server_datatable_hovertool.py" />
     <Compile Include="src\root\nested\visualize\extend_seaborn.py">
       <SubType>Code</SubType>
     </Compile>
@@ -119,17 +163,29 @@
     <Folder Include="src\root\nested" />
     <Folder Include="src\root\nested\customLogging" />
     <Folder Include="src\root\nested\dataAccess" />
+    <Folder Include="src\root\nested\dataAccess\ExcelDataAccess\" />
     <Folder Include="src\root\nested\dataAccess\WebApi\" />
+    <Folder Include="src\root\nested\dataAccess\WebApi\TreasuryGov\" />
     <Folder Include="src\root\nested\indicators\" />
+    <Folder Include="src\root\nested\indicators\TechnicalAnalysis\" />
     <Folder Include="src\root\nested\interestRateModeling" />
     <Folder Include="src\root\nested\futures\" />
+    <Folder Include="src\root\nested\BokehServe\" />
+    <Folder Include="src\root\nested\BokehServe\BokehServeStealBasis\" />
+    <Folder Include="src\root\nested\BokehServe\BokehServeStealBasis\templates\" />
+    <Folder Include="src\root\nested\BokehServe\BokehServeStealBasis\static\" />
     <Folder Include="src\root\nested\statisticalAnalysis\" />
     <Folder Include="src\root\nested\stocks\" />
+    <Folder Include="src\root\nested\SupervisedLearning\" />
     <Folder Include="src\root\nested\SysOs" />
     <Folder Include="src\root\nested\timeSeriesAnalysis" />
     <Folder Include="src\root\nested\timeSeriesAnalysis\extendARIMA" />
     <Folder Include="src\root\nested\timeSeriesAnalysis\extendProphet" />
     <Folder Include="src\root\nested\visualize\" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="CondaEnv|CondaEnv|GhazyBase1" />
+    <InterpreterReference Include="Global|PythonCore|3.6" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
 </Project>

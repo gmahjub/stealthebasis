@@ -254,6 +254,7 @@ def correlation_heatmaps(df, duration_point, risk_asset_list):
                               "corr_matrix_derivedPxPctChangeRiskOff_pctChangeRiskOn.png")
             # plt.tight_layout()
             top_correl_df = find_top_correlations(corr_matrix_derivedPxPctChangeRiskOff_pctChangeRiskOn)
+            print (top_correl_df)
             make_spread_price(top_correl_df, df)
             return
 
@@ -441,7 +442,7 @@ def get_yield_point_ts_from_db(duration_point):
 track_index_nominal_point_yield_spread(duration_point=[24],
                                        query_start_date="2019-06-01",
                                        query_end_date="2020-06-11",
-                                       risk_asset_list=['SPX', 'VIX'])
+                                       risk_asset_list=['SPX', 'VIX', 'VVIX'])
 
 # yield_to_px_delta = yield_delta_to_price_delta(coupon=0.17, ytm=0.19, maturity=2,
 #                                               yield_bp_delta=2, price=1000)

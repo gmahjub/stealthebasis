@@ -174,7 +174,7 @@ class TiingoDataObject(DataObject):
 
 if __name__ == '__main__':
     input_px_type_list = ['All']
-    symbols = ['SPY', 'IWM']
+    symbols = ['SPY', 'IWM', 'QQQ', 'FB', 'MSFT', 'AMZN', 'DIA', 'GLD', 'LQD', 'HYG', 'AAPL', 'ZROZ', 'IEF', 'TLT']
     start_date = "2011-01-01"
     end_date = str(pd.to_datetime('today')).split(' ')[0]
     source = "Tiingo"

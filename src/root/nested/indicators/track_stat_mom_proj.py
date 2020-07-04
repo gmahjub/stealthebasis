@@ -22,6 +22,7 @@ class YieldCurveRiskPricing:
     def __init__self(self,
                      yield_curve_obj):
         self.yield_curve_obj = yield_curve_obj
+       
 
 
 class TrackStatMomProj:
@@ -819,8 +820,8 @@ if __name__ == '__main__':
 
     tsmp = TrackStatMomProj(use_iex_trading_symbol_universe=True)
     stock_universe_df, ticker_col_nm = tsmp.get_stock_universe()
-    the_etf_df = stock_universe_df.reindex(the_etf_list)
-    tsmp.create_portfolio_returns(the_etf_df.index, start_date="2018-01-01")
+    #the_etf_df = stock_universe_df.reindex(the_etf_list)
+    #tsmp.create_portfolio_returns(the_etf_df.index, start_date="2018-01-01")
     # I like start date of 2018 for going forward because of volatility, autocorrelation of vol tells me going
     # forward we will have less drifting up markets and more volatile markets like the past 2.5 years.
-    #tsmp.get_px_df(stock_universe_df)
+    tsmp.get_px_df(stock_universe_df)

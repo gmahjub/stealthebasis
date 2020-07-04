@@ -703,16 +703,26 @@ class ExtendBokeh(object):
             p_scat.scatter(x=type_list[1], y=type_list[0], line_color=None, size=5,
                            source=scatter_source, legend=value(type_list[0]))
             # regression line
-            regression = np.polyfit(data[type_list[1]][rolling_window_size:], data[type_list[0]][rolling_window_size:], 1)
-            min_val = data[type_list[1]].min()
-            max_val = data[type_list[1]].max()
-            # r_x, r_y = zip(*((i, i*regression[0] + regression[1]) for i in range(min_val, max_val)))
-            r_x = np.linspace(start=min_val, stop=max_val, num=len(data))
-            r_y = r_x*regression[0] + regression[1]
-            p_scat.line(x=r_x, y=r_y, color = 'red')
+            regression_failed = False
+            try:
+                regression = np.polyfit(data[type_list[1]][rolling_window_size:], data[type_list[0]][rolling_window_size:], 1)
+            except np.linalg.LinAlgError as lae:
+                ExtendBokeh.LOGGER.error("extend_bokeh.bokeh_rolling_pxret_skew(): error during np.polyfit running regression: %s", str(lae))
+                regression_failed = True
+            if regression_failed is False:
+                min_val = data[type_list[1]].min()
+                max_val = data[type_list[1]].max()
+                # r_x, r_y = zip(*((i, i*regression[0] + regression[1]) for i in range(min_val, max_val)))
+                r_x = np.linspace(start=min_val, stop=max_val, num=len(data))
+                r_y = r_x*regression[0] + regression[1]
+                p_scat.line(x=r_x, y=r_y, color = 'red')
 
-        p_scat.legend.location = "top_left"
-        p_scat.legend.background_fill_color = "#fefefe"
+                p_scat.legend.location = "top_left"
+                p_scat.legend.background_fill_color = "#fefefe"
+            elif regression_failed is True:
+                p_line.legend.location = "top_left"
+                p_line.legend.background_fill_color = "#fefefe"
+                return p_line
         p_line.legend.location = "top_left"
         p_line.legend.background_fill_color = "#fefefe"
 
