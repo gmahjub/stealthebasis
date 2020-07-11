@@ -22,7 +22,6 @@ class YieldCurveRiskPricing:
     def __init__self(self,
                      yield_curve_obj):
         self.yield_curve_obj = yield_curve_obj
-       
 
 
 class TrackStatMomProj:
@@ -42,14 +41,26 @@ class TrackStatMomProj:
         self.use_iex_trading_symbol_universe = use_iex_trading_symbol_universe
         self.sec_type_list = sec_type_list
         self.plotly_histograms_dir = OSMuxImpl.get_proper_path('/workspace/data/plotly/histograms/')
+        self.skew_bin_csv_files_dir = OSMuxImpl.get_proper_path('/workspace/data/indicators/TrackStatMom/data/')
+        self.bokeh_html_file_dir = OSMuxImpl.get_proper_path('/workspace/data/bokeh/html')
         self.daily_window_sizes = daily_window_sizes
         self.weekly_window_sizes = weekly_window_sizes
-
         self.window_size_dict = {'D': daily_window_sizes,
                                  'W': weekly_window_sizes,
                                  'M': monthly_window_sizes}
-
         self.benchmark_ticker_list = ['SPY', 'QQQ', 'IWM']
+        skew_bins = np.arange(-2.0, 2.5, 1.0)
+        prev_skew_bin = -1000.0
+        self.bin_range_tuple_list = []
+        for skew_bin in skew_bins:
+            self.bin_range_tuple_list.append((prev_skew_bin, skew_bin))
+            prev_skew_bin = skew_bin
+        self.bin_range_tuple_list.append((skew_bins[-1], 1000.0))
+        self.bin_df_dict = dict()
+        for skew_bin_range in self.bin_range_tuple_list:
+            self.bin_df_dict[skew_bin_range] = \
+                pd.DataFrame(columns=['Date', 'Ticker', 'Returns', 'RollingReturns', 'ExcessFlag', 'SkewType',
+                                      'SkewValue'])
 
     """ get_pricing: main function to retrieve daily price data
             The source of this data is currently Tiingo. 
@@ -126,7 +137,6 @@ class TrackStatMomProj:
 
         ### for testing, just do the first row -- REMEMBER to UNDO THIS!!! GM 12/9/2018
         small_df = symbol_universe_df.head(1)
-        print(small_df)
         return_val_from_vectorized = small_df.apply(self.vectorized_symbols_func, axis=1)
         return return_val_from_vectorized
 
@@ -202,8 +212,8 @@ class TrackStatMomProj:
             excess_rets = excess_rets[1:].squeeze()
             excess_rets.rename(ticker + '_' + key + '_excess_rets', inplace=True)
             excess_rets_list.append(excess_rets)
+            # sem = standard error of the mean.
             sem = lambda excess_rets: excess_rets.std() / np.sqrt(len(excess_rets))
-
             rolling_excess_rets = sm.get_rolling_excess_returns(ticker=ticker,
                                                                 benchmark=key,
                                                                 freq=price_freq,
@@ -220,16 +230,26 @@ class TrackStatMomProj:
                                                                              "sem_exc_ret": sem,
                                                                              "skew_exc_ret": stats.skew,
                                                                              "kurtosis_exc_ret": stats.kurtosis})
-                er_rolling_df.columns = map(lambda col_nm: ticker + '-' + key + '_' +
-                                                           str(window_size) + price_freq + '_' + col_nm,
-                                            er_rolling_df.columns)
-                # er_rolling_df = er_rolling_df.fillna(method='bfill')
+                er_rolling_df.columns = \
+                    map(lambda col_nm: ticker + '-' + key + '_' + str(window_size) + price_freq + '_' + col_nm,
+                        er_rolling_df.columns)
                 excess_rets_list.append(er_rolling_df)
         df_excess = pd.concat(excess_rets_list, axis=1)[2:]
         excess_rets_type_list = list(
             filter(lambda col_nm: ('_excess_rets' in col_nm) is True, df_excess.columns.values))
         p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf = TrackStatMomProj.outlier_analysis(excess_rets)
         excess_log_rets = np.log(1 + excess_rets)
+        # df_excess has the following columns...
+        # 1. [Stock]_[Benchmark]_excess_rets
+        # 2. [Stock]_[Benchmark]_rolling_excess_rets
+        # 3. [Stock]-[Benchmark]_[N]D_mean_exc_ret
+        # 4. [Stock]-[Benchmark]_[N]D_std_exc_ret
+        # 5. [Stock]-[Benchmark]_[N]D_sem_exc_ret
+        # 6. [Stock]-[Benchmark]_[N]D_skew_exc_ret
+        # 7. [Stock]-[Benchmark]_[N]D_kurtosis_exc_ret
+        # ... where N is equal to 30, 60, 90, 120, 180, 270 Days (denoted by 'D')
+        # ... where [Benchmark] is equal to 'QQQ', 'SPY', 'IWM', or any benchmarket index, product, 'GLD' or IEF
+        # ... could be one
         return (df_excess, excess_rets_type_list, excess_rets, excess_log_rets,
                 p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf)
 
@@ -264,7 +284,6 @@ class TrackStatMomProj:
         px_ret_type_list = list(filter(lambda col_nm: ('_px_rets' in col_nm) is True, df.columns.values))
         p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf = TrackStatMomProj.outlier_analysis(px_rets)
         px_log_rets = np.log(1 + px_rets)
-
         return df, px_ret_type_list, px_rets, px_log_rets, p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf
 
     @staticmethod
@@ -536,15 +555,221 @@ class TrackStatMomProj:
         row['Annualized Sharpe'] = annualized_port_sr
         return row
 
+    def do_skew_binning(self,
+                        symbol_universe_df):
+        small_df = symbol_universe_df.head(1)
+        return_val_from_vectorized = small_df.apply(self.vectorized_skew_binner, axis=1)
+        return return_val_from_vectorized
+
+    def vectorized_skew_binner_helper(self, row, win_price_freq, is_excess, price_freq):
+        if is_excess:
+            # this means we have muiltiple columns to consider, one column for each benchmark
+            filter_str = str(win_price_freq) + price_freq + '_skew_exc_ret'
+            skew_exc_ret_columns = list(filter(lambda col_nm: (filter_str in col_nm) is True,
+                                               row.index))
+            filter_str = "rolling_excess_rets"
+            rolling_exc_ret_columns = list(filter(lambda col_nm: (filter_str in col_nm) is True, row.index))
+            filter_str = "excess_rets"
+            exc_ret_columns = list(set(filter(lambda col_nm: (filter_str in col_nm) is True, row.index)) -
+                                   set(rolling_exc_ret_columns))
+            for skew_exc_ret_col in skew_exc_ret_columns:
+                the_exc_ret_skew = row[skew_exc_ret_col]
+                if np.isnan(the_exc_ret_skew):
+                    return
+                bool_list = [y[0] <= the_exc_ret_skew <= y[1] for y in self.bin_range_tuple_list]
+                the_skew_range = ([value for key, value in zip(bool_list, self.bin_range_tuple_list) if key])
+                ticker = skew_exc_ret_col.split("_")[0].replace('-', '_')
+                stock_ticker = ticker.split("_")[0]
+                benchmark_ticker = ticker.split("_")[1]
+                rolling_exc_ret_name = list(filter(lambda col_nm: (ticker in col_nm) is True, rolling_exc_ret_columns))
+                exc_ret_name = list(filter(lambda col_nm: (ticker in col_nm) is True, exc_ret_columns))
+                the_rolling_exc_ret = row[rolling_exc_ret_name[0]]
+                the_exc_ret = row[exc_ret_name[0]]
+                insert_data_dict = {"Returns": the_exc_ret,
+                                    "RollingReturns": the_rolling_exc_ret,
+                                    "ExcessFlag": True,
+                                    "Ticker": ticker,
+                                    "Target": stock_ticker,
+                                    "Hedge": benchmark_ticker,
+                                    "SkewType": skew_exc_ret_col,
+                                    "SkewValue": the_exc_ret_skew,
+                                    "Date": row.name}
+                the_bin_df = self.bin_df_dict[the_skew_range[0]]
+                self.bin_df_dict[the_skew_range[0]] = the_bin_df.append(insert_data_dict, ignore_index=True)
+        else:
+            the_skew_ret = row[str(win_price_freq) + price_freq + "_skew_ret"]
+            rolling_ret_name = list(filter(lambda col_nm: ("px_rets_rolling" in col_nm) is True, row.index))
+            ret_name = list(
+                set(filter(lambda col_nm: ("px_rets" in col_nm) is True, row.index)) - set(rolling_ret_name))
+            bool_list = [y[0] <= the_skew_ret <= y[1] for y in self.bin_range_tuple_list]
+            the_skew_range = ([value for key, value in zip(bool_list, self.bin_range_tuple_list) if key])
+            insert_data_dict = {"Returns": row[ret_name[0]],
+                                "RollingReturns": row[rolling_ret_name[0]],
+                                "ExcessFlag": False,
+                                "Ticker": row['Ticker'],
+                                "Target": row['Ticker'],
+                                "Hedge": "",
+                                "SkewType": str(win_price_freq) + price_freq + "skew_ret",
+                                "SkewValue": the_skew_ret,
+                                "Date": row.name}
+            the_bin_df = self.bin_df_dict[the_skew_range[0]]
+            self.bin_df_dict[the_skew_range[0]] = the_bin_df.append(insert_data_dict, ignore_index=True)
+
+    def vectorized_skew_binner(self,
+                               row,
+                               use_csv=False):
+        price_freq = 'D'
+        win_price_freq = 30
+        return_period = 5
+        ticker = row.name
+        sm = self.sm
+        total_value_df = pd.DataFrame()
+        if use_csv:
+            self.bin_df_dict = dict()
+            for bin_range_tuple in self.bin_range_tuple_list:
+                csv_file_name = self.skew_bin_csv_files_dir + ticker + '_' + str(bin_range_tuple[0]) + '_' + \
+                                str(bin_range_tuple[1]) + '_bin.csv'
+                self.bin_df_dict[bin_range_tuple] = pd.read_csv(csv_file_name, index_col=0)
+                value = self.bin_df_dict[bin_range_tuple]
+                html_output_file_tickerYearGrouping = self.bokeh_html_file_dir + ticker + '_' + str(
+                    bin_range_tuple[0]) + '_' + str(
+                    bin_range_tuple[1]) + \
+                                                      '_skew_bin_analysis_TickerYearGrouping.html'
+                html_output_file_tickerGrouping = self.bokeh_html_file_dir + ticker + '_' + str(
+                    bin_range_tuple[0]) + '_' + str(
+                    bin_range_tuple[1]) + \
+                                                  '_skew_bin_analysis_TickerGrouping.html'
+                html_output_file_title = ticker + ' Skew vs. Returns Analysis: ' + str(bin_range_tuple) + ' Skew Range'
+                print(value.head())
+                print(value.columns)
+                ExtendBokeh.bokeh_bar_plot(value, csv_file_name,
+                                           html_output_file=html_output_file_tickerYearGrouping,
+                                           html_output_file_title=html_output_file_title)
+                ExtendBokeh.bokeh_bar_plot_single_group(value, csv_file_name,
+                                                        html_output_file=html_output_file_tickerGrouping,
+                                                        html_output_file_title=html_output_file_title)
+            total_csv_file_name = self.skew_bin_csv_files_dir + ticker + '_all_bins.csv'
+            total_value_df = pd.read_csv(total_csv_file_name, index_col=0)
+            print(total_value_df.head())
+            print(total_value_df.tail())
+            html_output_file_title = ticker + 'Skew vs. Sharpe Analysis'
+            html_output_file_binGrouping = self.bokeh_html_file_dir + ticker + '_skew_bin_analysis_BinGrouping.html'
+            total_write_out_fn_path = self.skew_bin_csv_files_dir + ticker + '_all_bins.csv'
+            ExtendBokeh.bokeh_bar_plot_all_bins(total_value_df, total_write_out_fn_path,
+                                                html_output_file=html_output_file_binGrouping,
+                                                html_output_file_title=html_output_file_title)
+            return
+        px = sm.get_pricing(start_date="2010-01-01",
+                            ticker=ticker,
+                            fields=['adjClose'],
+                            freq=price_freq)[ticker]
+        LOGGER.info("TrackStatMomProj.vectorized_skew_binner(): price_df for ticker %s has size %s", ticker,
+                    str(px.size))
+        if px.size == 0:
+            LOGGER.error("TrackStatMomProj.vectorized_skew_binner(): price_df for ticker %s has size %s", ticker,
+                         str(px.size))
+            return
+        # TODO: We should have a specific benchmark for each of the stock tickers. Which means we need
+        #       to store this in a database table, the benchmark for each ticker.
+        benchmark_px = sm.get_pricing(start_date="2010-01-01",
+                                      ticker=self.benchmark_ticker_list,
+                                      fields=['adjClose'],
+                                      freq=price_freq)
+        df_excess, excess_rets_type_list, excess_rets, excess_log_rets, \
+        p_iqr_hist_er, p_iqr_cdf_er, p_iqr_3sr_hist_er, p_iqr_3sr_cdf_er = \
+            self.do_excess_rets_analysis(ticker,
+                                         px,
+                                         benchmark_px,
+                                         price_freq,
+                                         return_period)
+        excess_rets_skew_columns = list(filter(lambda col_nm: (str(win_price_freq) + price_freq +
+                                                               "_skew_exc_ret" in col_nm) is True, df_excess.columns))
+        rolling_excess_rets_columns = list(filter(lambda col_nm: ("rolling_excess_rets" in col_nm) is True,
+                                                  df_excess.columns))
+        excess_rets_columns = list(set(filter(lambda col_nm: ("excess_rets" in col_nm) is True, df_excess.columns)) -
+                                   set(rolling_excess_rets_columns))
+        _ = df_excess[excess_rets_skew_columns + rolling_excess_rets_columns + excess_rets_columns].apply \
+            (self.vectorized_skew_binner_helper, axis=1, win_price_freq=win_price_freq, is_excess=True,
+             price_freq=price_freq)
+        df_px, px_ret_type_list, px_rets, px_log_rets, p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf = \
+            self.do_px_rets_analysis(ticker,
+                                     px,
+                                     price_freq,
+                                     return_period)
+        skew_columns = list(filter(lambda col_nm: (str(win_price_freq) + price_freq + "_skew_ret" in col_nm) is True,
+                                   df_px.columns))
+        rolling_rets_columns = list(filter(lambda col_nm: ("rets_rolling" in col_nm) is True, df_px.columns))
+        rets_columns = list(set(filter(lambda col_nm: ("rets" in col_nm) is True, df_px.columns)) -
+                            set(rolling_rets_columns))
+        df_px["Ticker"] = ticker
+        _ = df_px[["Ticker"] + skew_columns + rolling_rets_columns + rets_columns].dropna(). \
+            apply(self.vectorized_skew_binner_helper, axis=1, win_price_freq=win_price_freq,
+                  is_excess=False, price_freq=price_freq)
+        for key, value in self.bin_df_dict.items():
+            if value.size == 0:
+                LOGGER.info("TrackStatMomProj.vectorized_skew_binner(): Fwd Return Stats "
+                            "ticker: %s, bin: %s, Mean: %s, Std Dev: %s,"
+                            "Count: %s, Sharpe Ratio: %s", ticker, str(key), str(0.0), str(0.0), str(0), str(0.0))
+                continue
+            value['Bin'] = float(key[0])
+            if total_value_df.empty:
+                total_value_df = value
+            else:
+                total_value_df = total_value_df.append(value, ignore_index=True)
+            value_px_rets = value[value.ExcessFlag.eq(False)]
+            value_excess_rets = value[value.ExcessFlag.eq(True)]
+            sharpe_rat_rolling = value_px_rets.RollingReturns.mean() / value_px_rets.RollingReturns.std() * \
+                                 np.sqrt(value_px_rets.RollingReturns.size)
+            sharpe_rat_excess_rolling = value_excess_rets.RollingReturns.mean() / value_excess_rets.RollingReturns. \
+                std() * np.sqrt(value_excess_rets.RollingReturns.size)
+            LOGGER.info("TrackStatMomProj.vectorized_skew_binner(): Fwd Px Return Stats "
+                        "ticker: %s, bin: %s, Mean: %s, Std Dev: %s, "
+                        "Count: %s, Sharpe Ratio: %s", ticker, str(key), str(value_px_rets.RollingReturns.mean()),
+                        str(value_px_rets.RollingReturns.std()), str(value_px_rets.RollingReturns.size),
+                        str(sharpe_rat_rolling))
+            LOGGER.info("TrackStatMomProj.vectorized_skew_binner(): Fwd Excess Return Stats "
+                        "ticker: %s, bin: %s, Mean: %s, Std Dev: %s, "
+                        "Count: %s, Sharpe Ratio: %s", ticker, str(key), str(value_excess_rets.RollingReturns.mean()),
+                        str(value_excess_rets.RollingReturns.std()), str(value_excess_rets.RollingReturns.size),
+                        str(sharpe_rat_excess_rolling))
+            write_out_fn = ticker + '_' + str(key[0]) + '_' + str(key[1]) + '_bin.csv'
+            total_write_out_fn_path = self.skew_bin_csv_files_dir + write_out_fn
+            value.to_csv(total_write_out_fn_path)
+            html_output_file_tickerYearGrouping = self.bokeh_html_file_dir + ticker + '_' + str(key[0]) + '_' + str(
+                key[1]) + \
+                                                  '_skew_bin_analysis_TickerYearGrouping.html'
+            html_output_file_tickerGrouping = self.bokeh_html_file_dir + ticker + '_' + str(key[0]) + '_' + str(
+                key[1]) + \
+                                              '_skew_bin_analysis_TickerGrouping.html'
+            html_output_file_title = ticker + ' Skew vs. Returns Analysis: ' + str(key) + ' Skew Range'
+            ExtendBokeh.bokeh_bar_plot(value, total_write_out_fn_path,
+                                       html_output_file=html_output_file_tickerYearGrouping,
+                                       html_output_file_title=html_output_file_title)
+            ExtendBokeh.bokeh_bar_plot_single_group(value, total_write_out_fn_path,
+                                                    html_output_file=html_output_file_tickerGrouping,
+                                                    html_output_file_title=html_output_file_title)
+        html_output_file_title = ticker + 'Skew vs. Sharpe Analysis'
+        html_output_file_binGrouping = self.bokeh_html_file_dir + ticker + '_skew_bin_analysis_BinGrouping.html'
+        html_output_file_binTickerGrouping = self.bokeh_html_file_dir + ticker + \
+                                             '_skew_bin_analysis_BinGroupingInclExcess.html'
+        total_write_out_fn_path = self.skew_bin_csv_files_dir + ticker + '_all_bins.csv'
+        total_value_df.to_csv(total_write_out_fn_path)
+        ExtendBokeh.bokeh_bar_plot_all_bins(total_value_df, total_write_out_fn_path,
+                                            html_output_file=html_output_file_binGrouping,
+                                            html_output_file_title=html_output_file_title)
+        ExtendBokeh.bokeh_bar_plot_all_bins_by_ticker(total_value_df, total_write_out_fn_path,
+                                                      html_output_file=html_output_file_binTickerGrouping,
+                                                      html_output_file_title=html_output_file_title)
+
     def vectorized_symbols_func(self,
                                 row):
 
         # some parameters
         save_or_show = 'show'
         price_freq = 'D'
-        win_price_freq = 60
-        return_period = 45
-        skew_filter = (-2.0, 2.0)
+        win_price_freq = 30
+        return_period = 5
+        skew_filter = (0, 0)
         benchmark_ticker_list = self.benchmark_ticker_list
 
         ticker = row.name
@@ -554,11 +779,9 @@ class TrackStatMomProj:
         px = sm.get_pricing(ticker=ticker,
                             fields=['adjClose'],
                             freq=price_freq)[ticker]
-
         benchmark_px = sm.get_pricing(ticker=benchmark_ticker_list,
                                       fields=['adjClose'],
                                       freq=price_freq)
-
         df_excess, excess_rets_type_list, excess_rets, excess_log_rets, \
         p_iqr_hist_er, p_iqr_cdf_er, p_iqr_3sr_hist_er, p_iqr_3sr_cdf_er = \
             self.do_excess_rets_analysis(ticker,
@@ -566,13 +789,11 @@ class TrackStatMomProj:
                                          benchmark_px,
                                          price_freq,
                                          return_period)
-
         df_px, px_ret_type_list, px_rets, px_log_rets, p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf = \
             self.do_px_rets_analysis(ticker,
                                      px,
                                      price_freq,
                                      return_period)
-
         hist_plots = []
         excess_rets_hist_plots = []
         excess_rets_olanalysis_plots = []
@@ -648,10 +869,10 @@ class TrackStatMomProj:
             #    ExtendBokeh.bokeh_histogram_overlay_normal(px_log_rets,
             #                                               titles=['Px Log Returns Histogram',
             #                                                       'Px Log Returns CDF'])
-            excess_rets_olanalysis_plots.append(p_iqr_hist_er)
-            excess_rets_olanalysis_plots.append(p_iqr_cdf_er)
-            excess_rets_olanalysis_plots.append(p_iqr_3sr_hist_er)
-            excess_rets_olanalysis_plots.append(p_iqr_3sr_cdf_er)
+        excess_rets_olanalysis_plots.append(p_iqr_hist_er)
+        excess_rets_olanalysis_plots.append(p_iqr_cdf_er)
+        excess_rets_olanalysis_plots.append(p_iqr_3sr_hist_er)
+        excess_rets_olanalysis_plots.append(p_iqr_3sr_cdf_er)
         # hist_plots.append(px_rets_lognormal_ovl)
         # hist_plots.append(px_rets_lognormal_cdf)
 
@@ -710,6 +931,8 @@ class TrackStatMomProj:
 
         #### Below code puts out the plots for <ticker>.skew.html ####
         ##############################################################
+        df_px['abs_adjClose_px_rets'] = abs(df_px['adjClose_px_rets'])
+        df_px['abs_adjClose_px_rets_rolling'] = abs(df_px['adjClose_px_rets_rolling'])
         p_rolling_pxret_skew_line, p_rolling_pxret_skew_scatter = \
             ExtendBokeh.bokeh_rolling_pxret_skew(df_px,
                                                  freq=price_freq,
@@ -720,6 +943,16 @@ class TrackStatMomProj:
                                                             str(win_price_freq) + price_freq + '_skew_ret'],
                                                  rolling_window_size=win_price_freq,
                                                  skew_filter=skew_filter)
+        p_abs_rolling_pxret_skew_line, p_abs_rolling_pxret_skew_scatter = \
+            ExtendBokeh.bokeh_rolling_pxret_skew(df_px,
+                                                 freq=price_freq,
+                                                 title=['Abs(Rolling Returns) vs. Rolling Skew'],
+                                                 subtitle=[str(return_period) + price_freq + '/' +
+                                                           str(win_price_freq) + price_freq + ' Window'],
+                                                 type_list=['abs_adjClose_px_rets_rolling',
+                                                            str(win_price_freq) + price_freq + '_skew_ret'],
+                                                 rolling_window_size=win_price_freq,
+                                                 skew_filter=skew_filter)
         p_pxret_rolling_skew_line, p_pxret_rolling_skew_scatter = \
             ExtendBokeh.bokeh_rolling_pxret_skew(df_px,
                                                  freq=price_freq,
@@ -727,6 +960,16 @@ class TrackStatMomProj:
                                                  subtitle=[str(1) + price_freq + '/' +
                                                            str(win_price_freq) + price_freq + ' Window'],
                                                  type_list=['adjClose_px_rets',
+                                                            str(win_price_freq) + price_freq + '_skew_ret'],
+                                                 rolling_window_size=win_price_freq,
+                                                 skew_filter=skew_filter)
+        p_abs_pxret_rolling_skew_ling, p_abs_pxret_rolling_skew_scatter = \
+            ExtendBokeh.bokeh_rolling_pxret_skew(df_px,
+                                                 freq=price_freq,
+                                                 title=['Abs(Returns) vs. Rolling Skew'],
+                                                 subtitle=[str(1) + price_freq + '/' +
+                                                           str(win_price_freq) + price_freq + ' Window'],
+                                                 type_list=['abs_adjClose_px_rets',
                                                             str(win_price_freq) + price_freq + '_skew_ret'],
                                                  rolling_window_size=win_price_freq,
                                                  skew_filter=skew_filter)
@@ -769,21 +1012,22 @@ class TrackStatMomProj:
         html_output_file_excess_rets_olanalysis = html_output_file_path + \
                                                   html_output_file_title_excess_rets_olanalysis
 
-        if (save_or_show is 'show'):
-            ExtendBokeh.show_hist_plots(hist_plots,
-                                        html_output_file,
-                                        html_output_file_title)
-            ExtendBokeh.show_hist_plots(
-                [p_rolling_pxret_skew_line, p_rolling_pxret_skew_scatter, p_pxret_rolling_skew_line,
-                 p_pxret_rolling_skew_scatter],
-                html_output_file_skew_analysis,
-                html_output_file_title_skew_analysis)
-            ExtendBokeh.show_hist_plots(excess_rets_hist_plots,
-                                        html_output_file_excess_rets_analysis,
-                                        html_output_file_title_excess_rets_analysis)
-            ExtendBokeh.show_hist_plots(excess_rets_olanalysis_plots,
-                                        html_output_file_excess_rets_olanalysis,
-                                        html_output_file_title_excess_rets_olanalysis)
+        if save_or_show is 'show':
+            ExtendBokeh.show_hist_plots([p_rolling_pxret_skew_line, p_rolling_pxret_skew_scatter,
+                                         p_pxret_rolling_skew_line, p_pxret_rolling_skew_scatter,
+                                         p_abs_rolling_pxret_skew_line, p_abs_rolling_pxret_skew_scatter,
+                                         p_abs_pxret_rolling_skew_ling, p_abs_pxret_rolling_skew_scatter],
+                                        html_output_file_skew_analysis,
+                                        html_output_file_title_skew_analysis)
+            # ExtendBokeh.show_hist_plots(excess_rets_hist_plots,
+            #                            html_output_file_excess_rets_analysis,
+            #                            html_output_file_title_excess_rets_analysis)
+            # ExtendBokeh.show_hist_plots(excess_rets_olanalysis_plots,
+            #                            html_output_file_excess_rets_olanalysis,
+            #                            html_output_file_title_excess_rets_olanalysis)
+            # ExtendBokeh.show_hist_plots(hist_plots,
+            #                            html_output_file,
+            #                            html_output_file_title)
         else:
             ExtendBokeh.save_html(hist_plots,
                                   html_output_file,
@@ -804,12 +1048,16 @@ class TrackStatMomProj:
         # self.logger.info('TrackStatMomProj.vectorized_symbols_func(): histogram url for ticker %s is %s',
         #                 ticker, str(url))
 
+        # Long run SKEW Value (for the entire data set)
+        # Might make sense to keep a long run skew value and see how the short run skew revolves around it.
         skew = sm.calc_stock_return_skew(ticker=ticker, data=px_rets)
+        # Long run Kurtosis Value (for the entire data set)
+        # Makes sense to kee a long run kurtosis value and see how the short run revolves around it
         kurt = sm.calc_stock_return_kurtosis(ticker=ticker, data=px_rets)
 
 
 if __name__ == '__main__':
-    #TrackStatMomProj.monte_carlo_vs_bootstrapping_example()
+    # TrackStatMomProj.monte_carlo_vs_bootstrapping_example()
 
     spyder_etfs_list = ['XLE', 'XLU', 'XLF', 'XLI', 'XLK', 'XLP', 'XTL', 'XLV', 'XLY']
     index_etfs_list = ['SPY', 'QQQ', 'IWM', 'TLT', 'ZROZ', 'GLD', 'HYG',
@@ -818,10 +1066,12 @@ if __name__ == '__main__':
 
     the_etf_list = index_etfs_list
 
-    tsmp = TrackStatMomProj(use_iex_trading_symbol_universe=True)
+    tsmp = TrackStatMomProj(use_iex_trading_symbol_universe=False, stock_universe_filename="NQ100")
     stock_universe_df, ticker_col_nm = tsmp.get_stock_universe()
-    #the_etf_df = stock_universe_df.reindex(the_etf_list)
-    #tsmp.create_portfolio_returns(the_etf_df.index, start_date="2018-01-01")
+    print(stock_universe_df.head())
+    # the_etf_df = stock_universe_df.reindex(the_etf_list)
+    # tsmp.create_portfolio_returns(the_etf_df.index, start_date="2018-01-01")
     # I like start date of 2018 for going forward because of volatility, autocorrelation of vol tells me going
     # forward we will have less drifting up markets and more volatile markets like the past 2.5 years.
-    tsmp.get_px_df(stock_universe_df)
+    # tsmp.get_px_df(stock_universe_df)
+    tsmp.do_skew_binning(stock_universe_df)

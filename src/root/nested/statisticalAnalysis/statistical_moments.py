@@ -182,14 +182,14 @@ class StatisticalMoments(object):
                                    source=source,
                                    symbols=symbols)
             pricing_dict = mdo.get_px_data_df(start_date,
-                                          end_date)
+                                              end_date)
             pricing_df = pricing_dict[ticker]
         else:
             pricing_df = data
         if freq is not 'D':
             pricing_df = self.down_sample_daily_price_data(pricing=pricing_df, to_freq=freq)
         pricing = pricing_df[px_type]
-        rolling_returns = pricing.pct_change(periods = window_size)
+        rolling_returns = pricing.pct_change(periods=window_size)
         if shift_rets_series is True:
             rolling_returns = rolling_returns.shift(-1*window_size)
         return rolling_returns.squeeze()
@@ -396,7 +396,7 @@ class StatisticalMoments(object):
 
     @staticmethod
     def remove_outliers_from_non_normal_dist(px_returns_series,
-                                             k_IQR = 1.5):
+                                             k_IQR = 3.0):
 
         """ Here we will use the IQR method. To classify outliers liberally, use k_IQR = 1.5
          To classify outliers very selectively, use k_IQR = 3.0"""
