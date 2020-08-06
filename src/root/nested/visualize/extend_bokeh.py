@@ -705,6 +705,11 @@ class ExtendBokeh(object):
             # regression line
             regression_failed = False
             try:
+                print(type_list[1])
+                print(type_list[0])
+                print(data[type_list[1]][rolling_window_size:])
+                print(data[type_list[0]][rolling_window_size:])
+                print ("numpy version, before polyfit", np.__version__)
                 regression = np.polyfit(data[type_list[1]][rolling_window_size:], data[type_list[0]][rolling_window_size:], 1)
             except np.linalg.LinAlgError as lae:
                 ExtendBokeh.LOGGER.error("extend_bokeh.bokeh_rolling_pxret_skew(): error during np.polyfit running regression: %s", str(lae))

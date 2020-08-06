@@ -418,7 +418,7 @@ def run_real_yield_curve():
 # run_index_etf(run_type="HISTORICAL")
 run_cboe_daily()
 run_currencies(run_type="DAILY")
-run_vix_futs_curve(run_type="HISTORICAL")
+run_vix_futs_curve(run_type="DAILY")
 run_crude_oil(run_type="DAILY")
 run_eurodollars(run_type="DAILY")
 run_equity_futures(run_type="DAILY")

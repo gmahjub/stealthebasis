@@ -152,6 +152,7 @@ class SecureKeysAccess:
             df = pd.read_csv(filepath_or_buffer=info_file, index_col=0, header=None)
             df.index.name = 'Name'
             df.columns = [['Value']]
+            print (df.loc[info_field]['Value'])
             return_info = df.loc[info_field]['Value'][0]
         return return_info
 

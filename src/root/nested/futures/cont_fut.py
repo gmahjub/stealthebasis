@@ -1338,37 +1338,79 @@ def vx_curve_to_db_vectorized(row):
     identifier = row.name.to_pydatetime()
     # VX1 - settle price
     try:
-        merged_vx1_settle = float(row.loc['Settle.0.Cont'])
+        if np.isnan(row.loc['Settle.0.Cont']):
+            LOGGER.error("cont_fut.vx_curve_to_db_vectorized():Settle.0.cont is NAN! %s", str(row.loc['Settle.0.Cont']))
+            LOGGER.info("cont_fut.vx_curve_to_db_vectorized(): Settle.0.cont is NAN, setting value to "
+                        "default_vx_price %s", str(default_vx_px))
+            merged_vx1_settle = default_vx_px
+        else:
+            merged_vx1_settle = float(row.loc['Settle.0.Cont'])
     except KeyError:
         merged_vx1_settle = default_vx_px
     # VX2 - settle price
     try:
-        merged_vx2_settle = float(row.loc['Settle.1.Cont'])
+        if np.isnan(row.loc['Settle.1.Cont']):
+            LOGGER.error("cont_fut.vx_curve_to_db_vectorized():Settle.1.cont is NAN! %s", str(row.loc['Settle.1.Cont']))
+            LOGGER.info("cont_fut.vx_curve_to_db_vectorized(): Settle.1.cont is NAN, setting value to "
+                        "default_vx_price %s", str(default_vx_px))
+            merged_vx2_settle = default_vx_px
+        else:
+            merged_vx2_settle = float(row.loc['Settle.1.Cont'])
     except KeyError:
         merged_vx2_settle = default_vx_px
     # VX3 - settle price
     try:
-        merged_vx3_settle = float(row.loc['Settle.2.Cont'])
+        if np.isnan(row.loc['Settle.2.Cont']):
+            LOGGER.error("cont_fut.vx_curve_to_db_vectorized():Settle.2.cont is NAN! %s", str(row.loc['Settle.2.Cont']))
+            LOGGER.info("cont_fut.vx_curve_to_db_vectorized(): Settle.2.cont is NAN, setting value to "
+                        "default_vx_price %s", str(default_vx_px))
+            merged_vx3_settle = default_vx_px
+        else:
+            merged_vx3_settle = float(row.loc['Settle.2.Cont'])
     except KeyError:
         merged_vx3_settle = default_vx_px
     # VX4 - settle price
     try:
-        merged_vx4_settle = float(row.loc['Settle.3.Cont'])
+        if np.isnan(row.loc['Settle.3.Cont']):
+            LOGGER.error("cont_fut.vx_curve_to_db_vectorized():Settle.3.cont is NAN! %s", str(row.loc['Settle.3.Cont']))
+            LOGGER.info("cont_fut.vx_curve_to_db_vectorized(): Settle.3.cont is NAN, setting value to "
+                        "default_vx_price %s", str(default_vx_px))
+            merged_vx4_settle = default_vx_px
+        else:
+            merged_vx4_settle = float(row.loc['Settle.3.Cont'])
     except KeyError:
         merged_vx4_settle = default_vx_px
     # VX5 - settle price
     try:
-        merged_vx5_settle = float(row.loc['Settle.4.Cont'])
+        if np.isnan(row.loc['Settle.4.Cont']):
+            LOGGER.error("cont_fut.vx_curve_to_db_vectorized():Settle.4.cont is NAN! %s", str(row.loc['Settle.4.Cont']))
+            LOGGER.info("cont_fut.vx_curve_to_db_vectorized(): Settle.4.cont is NAN, setting value to "
+                        "default_vx_price %s", str(default_vx_px))
+            merged_vx5_settle = default_vx_px
+        else:
+            merged_vx5_settle = float(row.loc['Settle.4.Cont'])
     except KeyError:
         merged_vx5_settle = default_vx_px
     # VX6 - settle price
     try:
-        merged_vx6_settle = float(row.loc['Settle.5.Cont'])
+        if np.isnan(row.loc['Settle.5.Cont']):
+            LOGGER.error("cont_fut.vx_curve_to_db_vectorized():Settle.5.cont is NAN! %s", str(row.loc['Settle.5.Cont']))
+            LOGGER.info("cont_fut.vx_curve_to_db_vectorized(): Settle.5.cont is NAN, setting value to "
+                        "default_vx_price %s", str(default_vx_px))
+            merged_vx6_settle = default_vx_px
+        else:
+            merged_vx6_settle = float(row.loc['Settle.5.Cont'])
     except KeyError:
         merged_vx6_settle = default_vx_px
     # VX7 - settle price
     try:
-        merged_vx7_settle = float(row.loc['Settle.6.Cont'])
+        if np.isnan(row.loc['Settle.6.Cont']):
+            LOGGER.error("cont_fut.vx_curve_to_db_vectorized():Settle.6.cont is NAN! %s", str(row.loc['Settle.6.Cont']))
+            LOGGER.info("cont_fut.vx_curve_to_db_vectorized(): Settle.6.cont is NAN, setting value to "
+                        "default_vx_price %s", str(default_vx_px))
+            merged_vx7_settle = default_vx_px
+        else:
+            merged_vx7_settle = float(row.loc['Settle.6.Cont'])
     except KeyError:
         merged_vx7_settle = default_vx_px
     # NEW_DATE - date of yield curve
