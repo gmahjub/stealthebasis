@@ -48,7 +48,7 @@ class TrackStatMomProj:
         self.window_size_dict = {'D': daily_window_sizes,
                                  'W': weekly_window_sizes,
                                  'M': monthly_window_sizes}
-        self.benchmark_ticker_list = ['SPY', 'QQQ', 'IWM']
+        self.benchmark_ticker_list = ['SPY', 'QQQ', 'IWM', 'DIA']
         skew_bins = np.arange(-2.0, 2.5, 1.0)
         prev_skew_bin = -1000.0
         self.bin_range_tuple_list = []
@@ -62,10 +62,12 @@ class TrackStatMomProj:
                 pd.DataFrame(columns=['Date', 'Ticker', 'Returns', 'RollingReturns', 'ExcessFlag', 'SkewType',
                                       'SkewValue'])
 
+    def get_benchmark_ticker_list(self):
+        return self.benchmark_ticker_list
+
     """ get_pricing: main function to retrieve daily price data
             The source of this data is currently Tiingo. 
         """
-
     def get_pricing(self,
                     ticker,
                     start_date,
@@ -205,31 +207,72 @@ class TrackStatMomProj:
         window_sizes = self.window_size_dict[price_freq]
         excess_rets_list = []
         for key in sorted(set(benchmark_px.keys())):
+            ticker = "MSFT"
+            stock_atr_df = sm.get_average_true_range(ticker=ticker, freq='W', window_size=12, start_date='2015-01-01')
+            key = "SPY"
+            benchmark_atr_df = sm.get_average_true_range(ticker=key, freq='W', window_size=26, start_date='2015-01-01')
+            sm.get_atr_spread(stock_atr_df, benchmark_atr_df)
+            exit()
             benchmark_data = benchmark_px[key]
-            excess_rets = pa.get_excess_returns(stock_data=px,
-                                                benchmark_data=benchmark_data)
+            excess_log_rets, benchmark_log_rets, stock_log_rets = sm.get_stock_excess_return(stock_ticker=ticker,
+                                                                                             benchmark_ticker=key,
+                                                                                             freq='D',
+                                                                                             start_date='2018-01-01')
+            stock_benchmark_spread_px = sm.get_stock_benchmark_spread_px(stock_ticker=ticker,
+                                                                         benchmark_ticker=key,
+                                                                         hedge_ratio_calc_window=1,
+                                                                         start_date='2015-01-01',
+                                                                         freq='W')
+            stock_log_rets = stock_log_rets[1:].squeeze()
+            excess_log_rets = excess_log_rets[1:].squeeze()
+            benchmark_log_rets = benchmark_log_rets[1:].squeeze()
+            excess_log_rets.rename(ticker + '_' + key + '_excess_rets', inplace=True)
+            benchmark_log_rets.rename(key + '_benchmark_rets', inplace=True)
+            stock_log_rets.rename(ticker + '_stock_rets', inplace=True)
+            excess_rets_list.append(excess_log_rets)
+            rolling_excess_rets, benchmark_rolling_rets = sm.get_rolling_excess_returns(ticker=ticker,
+                                                                                        benchmark=key,
+                                                                                        freq=price_freq,
+                                                                                        px_type='adjClose',
+                                                                                        ticker_data=px,
+                                                                                        benchmark_data=benchmark_data,
+                                                                                        window_size=return_period,
+                                                                                        shift_rets_series=True)
 
-            excess_rets = excess_rets[1:].squeeze()
-            excess_rets.rename(ticker + '_' + key + '_excess_rets', inplace=True)
-            excess_rets_list.append(excess_rets)
-            # sem = standard error of the mean.
-            sem = lambda excess_rets: excess_rets.std() / np.sqrt(len(excess_rets))
-            rolling_excess_rets = sm.get_rolling_excess_returns(ticker=ticker,
-                                                                benchmark=key,
-                                                                freq=price_freq,
-                                                                px_type='adjClose',
-                                                                ticker_data=px,
-                                                                benchmark_data=benchmark_data,
-                                                                window_size=return_period,
-                                                                shift_rets_series=True)
             rolling_excess_rets.rename(ticker + '_' + key + '_rolling_excess_rets', inplace=True)
+            benchmark_rolling_rets.rename(key + '_benchmark_rolling_log_rets', inplace=True)
             excess_rets_list.append(rolling_excess_rets)
             for window_size in window_sizes:
-                er_rolling_df = excess_rets.rolling(window=window_size).agg({"mean_exc_ret": np.mean,
-                                                                             "std_exc_ret": np.std,
-                                                                             "sem_exc_ret": sem,
-                                                                             "skew_exc_ret": stats.skew,
-                                                                             "kurtosis_exc_ret": stats.kurtosis})
+                rolling_beta_series = pa.get_beta(stock_returns=stock_log_rets,
+                                                  benchmark_returns=benchmark_log_rets,
+                                                  window_size=window_size)
+                rolling_beta_series.name = ticker + '_' + key + '_' + str(window_size) + '_' + \
+                                           str(price_freq) + '_RollingBeta'
+                """
+                the_excess_returns_rolling_lpm_series = pa.get_lpm(returns=excess_log_rets,
+                                                                   window_size=window_size)
+                the_excess_returns_rolling_lpm_series.name = ticker + '_' + key + '_' + str(window_size) + '_' + \
+                                                             str(price_freq) + '_ExcessReturnLPM'
+                the_benchmark_rolling_lpm_series = pa.get_lpm(returns=benchmark_log_rets,
+                                                              window_size=window_size)
+                the_benchmark_rolling_lpm_series.name = key + '_' + str(window_size) + '_' + \
+                                                        str(price_freq) + '_BenchmarkReturnLPM'
+                the_excess_returns_rolling_hpm_series = pa.get_hpm(returns=excess_log_rets,
+                                                                   window_size=window_size)
+                the_excess_returns_rolling_hpm_series.name = ticker + '_' + key + '_' + str(window_size) + '_' + \
+                                                             str(price_freq) + '_ExcessReturnHPM'
+                the_benchmark_rolling_hpm_series = pa.get_hpm(returns=benchmark_log_rets,
+                                                              window_size=window_size)
+                the_benchmark_rolling_hpm_series.name = key + '_' + str(window_size) + '_' + \
+                                                        str(price_freq) + '_BenchmarkReturnHPM'
+                """
+                er_rolling_df = excess_log_rets. \
+                    rolling(window=window_size).agg({"mean_exc_ret": np.mean,
+                                                     "std_exc_ret": np.std,
+                                                     "sem_exc_ret": lambda x: x.std() / np.sqrt(len(x)),
+                                                     "skew_exc_ret": stats.skew,
+                                                     "kurtosis_exc_ret": stats.kurtosis,
+                                                     "sharpe_exc_ret": lambda x: x.mean() / x.std() * np.sqrt(len(x))})
                 er_rolling_df.columns = \
                     map(lambda col_nm: ticker + '-' + key + '_' + str(window_size) + price_freq + '_' + col_nm,
                         er_rolling_df.columns)
@@ -237,8 +280,8 @@ class TrackStatMomProj:
         df_excess = pd.concat(excess_rets_list, axis=1)[2:]
         excess_rets_type_list = list(
             filter(lambda col_nm: ('_excess_rets' in col_nm) is True, df_excess.columns.values))
-        p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf = TrackStatMomProj.outlier_analysis(excess_rets)
-        excess_log_rets = np.log(1 + excess_rets)
+        p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf = TrackStatMomProj.\
+            outlier_analysis(excess_log_rets.dropna().squeeze())
         # df_excess has the following columns...
         # 1. [Stock]_[Benchmark]_excess_rets
         # 2. [Stock]_[Benchmark]_rolling_excess_rets
@@ -250,7 +293,7 @@ class TrackStatMomProj:
         # ... where N is equal to 30, 60, 90, 120, 180, 270 Days (denoted by 'D')
         # ... where [Benchmark] is equal to 'QQQ', 'SPY', 'IWM', or any benchmarket index, product, 'GLD' or IEF
         # ... could be one
-        return (df_excess, excess_rets_type_list, excess_rets, excess_log_rets,
+        return (df_excess, excess_rets_type_list, excess_log_rets, excess_log_rets,
                 p_iqr_hist, p_iqr_cdf, p_iqr_3sr_hist, p_iqr_3sr_cdf)
 
     def do_px_rets_analysis(self,
@@ -274,6 +317,7 @@ class TrackStatMomProj:
         for window_size in window_sizes:
             rolling_df = px_rets.rolling(window=window_size).agg({"mean_ret": np.mean,
                                                                   "std_ret": np.std,
+                                                                  "ret_vol": lambda x: x.std() * np.sqrt(window_size),
                                                                   "sem_ret": sem,
                                                                   "skew_ret": stats.skew,
                                                                   "kurtosis_ret": stats.kurtosis})
@@ -555,6 +599,38 @@ class TrackStatMomProj:
         row['Annualized Sharpe'] = annualized_port_sr
         return row
 
+    def do_px_linear_regression(self,
+                                symbol_universe_df):
+        small_df = symbol_universe_df.head(1)
+        return_val_from_vectorized = small_df.apply(self.vectorized_px_linear_regression, axis=1)
+        return return_val_from_vectorized
+
+    def vectorized_px_linear_regression(self,
+                                        row,
+                                        use_csv=False):
+        price_freq = 'D'
+        ticker = row.name
+        ticker = 'SPY'
+        sm = self.sm
+        total_value_df = pd.DataFrame()
+        px = sm.get_pricing(start_date="2017-01-01",
+                            ticker=ticker,
+                            fields=['adjClose'],
+                            freq=price_freq)[ticker]
+        LOGGER.info("TrackStatMomProj.vectorized_skew_binner(): price_df for ticker %s has size %s", ticker,
+                    str(px.size))
+        if px.size == 0:
+            LOGGER.error("TrackStatMomProj.vectorized_skew_binner(): price_df for ticker %s has size %s", ticker,
+                         str(px.size))
+            return
+        # TODO: We should have a specific benchmark for each of the stock tickers. Which means we need
+        #       to store this in a database table, the benchmark for each ticker.
+        benchmark_px = sm.get_pricing(start_date="2017-01-01",
+                                      ticker=self.benchmark_ticker_list,
+                                      fields=['adjClose'],
+                                      freq=price_freq)
+        sm.linear_regression_on_price(tgt_df=px, tgt_ticker=ticker, benchmark_df=benchmark_px)
+
     def do_skew_binning(self,
                         symbol_universe_df):
         small_df = symbol_universe_df.head(1)
@@ -582,6 +658,7 @@ class TrackStatMomProj:
                 stock_ticker = ticker.split("_")[0]
                 benchmark_ticker = ticker.split("_")[1]
                 rolling_exc_ret_name = list(filter(lambda col_nm: (ticker in col_nm) is True, rolling_exc_ret_columns))
+
                 exc_ret_name = list(filter(lambda col_nm: (ticker in col_nm) is True, exc_ret_columns))
                 the_rolling_exc_ret = row[rolling_exc_ret_name[0]]
                 the_exc_ret = row[exc_ret_name[0]]
@@ -620,8 +697,9 @@ class TrackStatMomProj:
                                use_csv=False):
         price_freq = 'D'
         win_price_freq = 30
-        return_period = 5
+        return_period = 10
         ticker = row.name
+        ticker = 'COST'
         sm = self.sm
         total_value_df = pd.DataFrame()
         if use_csv:
@@ -632,16 +710,10 @@ class TrackStatMomProj:
                 self.bin_df_dict[bin_range_tuple] = pd.read_csv(csv_file_name, index_col=0)
                 value = self.bin_df_dict[bin_range_tuple]
                 html_output_file_tickerYearGrouping = self.bokeh_html_file_dir + ticker + '_' + str(
-                    bin_range_tuple[0]) + '_' + str(
-                    bin_range_tuple[1]) + \
-                                                      '_skew_bin_analysis_TickerYearGrouping.html'
+                    bin_range_tuple[0]) + '_' + str(bin_range_tuple[1]) + '_skew_bin_analysis_TickerYearGrouping.html'
                 html_output_file_tickerGrouping = self.bokeh_html_file_dir + ticker + '_' + str(
-                    bin_range_tuple[0]) + '_' + str(
-                    bin_range_tuple[1]) + \
-                                                  '_skew_bin_analysis_TickerGrouping.html'
+                    bin_range_tuple[0]) + '_' + str(bin_range_tuple[1]) + '_skew_bin_analysis_TickerGrouping.html'
                 html_output_file_title = ticker + ' Skew vs. Returns Analysis: ' + str(bin_range_tuple) + ' Skew Range'
-                print(value.head())
-                print(value.columns)
                 ExtendBokeh.bokeh_bar_plot(value, csv_file_name,
                                            html_output_file=html_output_file_tickerYearGrouping,
                                            html_output_file_title=html_output_file_title)
@@ -650,8 +722,6 @@ class TrackStatMomProj:
                                                         html_output_file_title=html_output_file_title)
             total_csv_file_name = self.skew_bin_csv_files_dir + ticker + '_all_bins.csv'
             total_value_df = pd.read_csv(total_csv_file_name, index_col=0)
-            print(total_value_df.head())
-            print(total_value_df.tail())
             html_output_file_title = ticker + 'Skew vs. Sharpe Analysis'
             html_output_file_binGrouping = self.bokeh_html_file_dir + ticker + '_skew_bin_analysis_BinGrouping.html'
             total_write_out_fn_path = self.skew_bin_csv_files_dir + ticker + '_all_bins.csv'
@@ -659,7 +729,7 @@ class TrackStatMomProj:
                                                 html_output_file=html_output_file_binGrouping,
                                                 html_output_file_title=html_output_file_title)
             return
-        px = sm.get_pricing(start_date="2010-01-01",
+        px = sm.get_pricing(start_date="2017-01-01",
                             ticker=ticker,
                             fields=['adjClose'],
                             freq=price_freq)[ticker]
@@ -671,7 +741,7 @@ class TrackStatMomProj:
             return
         # TODO: We should have a specific benchmark for each of the stock tickers. Which means we need
         #       to store this in a database table, the benchmark for each ticker.
-        benchmark_px = sm.get_pricing(start_date="2010-01-01",
+        benchmark_px = sm.get_pricing(start_date="2017-01-01",
                                       ticker=self.benchmark_ticker_list,
                                       fields=['adjClose'],
                                       freq=price_freq)
@@ -1068,10 +1138,12 @@ if __name__ == '__main__':
 
     tsmp = TrackStatMomProj(use_iex_trading_symbol_universe=False, stock_universe_filename="NQ100")
     stock_universe_df, ticker_col_nm = tsmp.get_stock_universe()
-    print(stock_universe_df.head())
+    symbols_list = list(stock_universe_df.index)
+
     # the_etf_df = stock_universe_df.reindex(the_etf_list)
     # tsmp.create_portfolio_returns(the_etf_df.index, start_date="2018-01-01")
     # I like start date of 2018 for going forward because of volatility, autocorrelation of vol tells me going
     # forward we will have less drifting up markets and more volatile markets like the past 2.5 years.
     # tsmp.get_px_df(stock_universe_df)
-    tsmp.do_skew_binning(stock_universe_df)
+    # tsmp.do_skew_binning(stock_universe_df)
+    tsmp.do_px_linear_regression(stock_universe_df)

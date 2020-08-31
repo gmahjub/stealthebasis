@@ -706,12 +706,9 @@ class ExtendBokeh(object):
                                     px_ret_type, color)
             if series_cnt == 0:
                 p_line.y_range = Range1d(data[px_ret_type].min(), data[px_ret_type].max())
-                # p_line.y_range = Range1d(-0.1, 0.1)
                 p_line.line(x="x_coord", y=px_ret_type, color=color, alpha=0.5, source=source, legend_label=px_ret_type)
             else:
                 p_line.extra_y_ranges = {"foo": DataRange1d(data[px_ret_type].min(), data[px_ret_type].max())}
-                # range_padding=10,
-                # range_padding_units='percent')}
                 p_line.line(x="x_coord", y=px_ret_type, color=color, alpha=0.5, source=source, legend_label=px_ret_type,
                             y_range_name="foo")
                 p_line.add_layout(LinearAxis(y_range_name="foo"), 'right')

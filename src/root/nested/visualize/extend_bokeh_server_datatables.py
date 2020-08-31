@@ -30,6 +30,7 @@ class DataTables(object):
         self.session = push_session(self.document)
 
     def create(self):
+        print ("running create...")
         manufacturers = sorted(mpg["manufacturer"].unique())
         models = sorted(mpg["model"].unique())
         transmissions = sorted(mpg["trans"].unique())
@@ -135,6 +136,7 @@ class DataTables(object):
 
     def run(self, do_view=False, poll_interval=0.5):
         if do_view:
+            print ("what the fuck!!!!!")
             self.session.show()
 
         self.session.loop_until_closed()
@@ -142,5 +144,6 @@ class DataTables(object):
 
 if __name__ == "__main__":
     data_tables = DataTables()
+    data_tables.create()
     data_tables.document.validate()
     data_tables.run(True)

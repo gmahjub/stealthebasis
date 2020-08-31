@@ -1,11 +1,14 @@
 from bokeh.document import Document
-from bokeh.models import ColumnDataSource, DataRange1d, Plot, LinearAxis, Grid, Circle, HoverTool, BoxSelectTool, Title
+from bokeh.models import (ColumnDataSource, DataRange1d, Plot, LinearAxis, Grid, Circle, HoverTool, BoxSelectTool,
+                          Title, Button, CustomJS, RangeSlider, TableColumn,)
 from bokeh.models.widgets import DataTable, TableColumn, StringFormatter, NumberFormatter, StringEditor, IntEditor, \
-    NumberEditor, SelectEditor
+    NumberEditor, SelectEditor, DateFormatter
 from bokeh.models.layouts import Column
 from bokeh.embed import file_html
 from bokeh.resources import INLINE
 from bokeh.util.browser import view
+from bokeh.io import curdoc
+from bokeh.layouts import column, row
 from bokeh.sampledata.autompg2 import autompg2 as mpg
 from root.nested.SysOs.os_mux import OSMuxImpl
 from root.nested import get_logger
@@ -16,7 +19,92 @@ LOGGER = get_logger()
 class ExtendDataTable:
 
     @staticmethod
+    def make_analyze_datatable_bokeh_server(df_analyze):
+        """
+        df_analyze = pd.concat([new_df.recentVol_emaAtr_diff_Atr, new_df.ExcessFwdRets, df_currCurr.SpearmanCorr,
+                                df_currCurr.PearsonCorr, df_currCurr.r_squared, df_currCurr.intercept,
+                                df_currCurr.slope, new_df.AbsValExcessFwdRets, new_df.StockFwdRets,
+                                new_df.BenchmarkFwdRets, new_df.StockAdjClose, new_df.BenchmarkAdjClose], axis=1)
+        Index([ 'recentVol_emaAtr_diff_Atr', 'ExcessFwdRets', 'SpearmanCorr',
+                'PearsonCorr', 'r_squared', 'intercept', 'slope', 'AbsValExcessFwdRets',
+                'StockFwdRets', 'BenchmarkFwdRets', 'StockAdjClose',
+                'BenchmarkAdjClose'],
+        dtype='object')
+        """
+        source = ColumnDataSource(df_analyze)
+        columns = [
+            TableColumn(field="recentVol_emaAtr_diff_Atr", title="Volatility (ATR) Spread"),
+            TableColumn(field="ExcessFwdRets", title="Excess Forward Return"),
+            TableColumn(field="SpearmanCorr", title="Spearman Rank Correlation"),
+            TableColumn(field="PearsonCorr", title="Pearson Correlation"),
+            TableColumn(field="r_squared", title="R-Squared"),
+            TableColumn(field="intercept", title="Line Regress Intercept"),
+            TableColumn(field="slope", title="Line Regress Slope"),
+            TableColumn(field="AbsValExcessFwdRets", title="Magnitude of Returns"),
+            TableColumn(field="StockFwdRets", title='Target Forward Return'),
+            TableColumn(field="BenchmarkFwdRets", title='Benchmark Forward Return'),
+            TableColumn(field="StockAdjClose", title='Target Px. (Adj Close)'),
+            TableColumn(field="BenchmarkAdjClose", title='Benchmark Px. (Adj Close)')
+        ]
+        data_table = DataTable(source=source, columns=columns, widht=1000)
+        return data_table
+
+    @staticmethod
+    def make_timeseries_datatable_bokeh_server(df):
+        source = ColumnDataSource(df)
+        columns = [
+            TableColumn(field="Date", title="Date", formatter=DateFormatter()),
+            TableColumn(field="Target", title="Target Timeseries",
+                        formatter=StringFormatter(font_style="bold", text_color='red')),
+            TableColumn(field="Hedge", title="Hedge Timeseries",
+                        formatter=StringFormatter(font_style="bold", text_color='blue')),
+            TableColumn(field="Correlation", title="Correlation",
+                        formatter=StringFormatter(font_style="bold", text_color='darkgreen'))
+        ]
+        data_table = DataTable(source=source, columns=columns, width=1000)
+        return data_table
+
+    @staticmethod
+    def make_timeseries_datatable_plot_bokeh_server(df):
+        source = ColumnDataSource(df)
+        plot = Plot(title=Title(text="Rolling Spearman Rank Correlation)", align="center"),
+                    x_range=DataRange1d(),
+                    y_range=DataRange1d(), plot_width=1000, plot_height=300)
+        plot.add_layout(LinearAxis(), 'below')
+        yaxis = LinearAxis()
+        plot.add_layout(yaxis, 'left')
+        plot.add_layout(Grid(dimension=1, ticker=yaxis.ticker))
+        # Add Glyphs
+        correlation_glyph = Circle(x="Date", y="Correlation", fill_color="#396285", size=8, fill_alpha=0.5,
+                                   line_alpha=0.5)
+        target_glyph = Circle(x="Date", y="Target", fill_color="#396285", size=8, fill_alpha=0.5,
+                              line_alpha=0.5)
+        hedge_glyph = Circle(x="Date", y="Hedge", fill_color="#396285", size=8, fill_alpha=0.5,
+                             line_alpha=0.5)
+        correlation = plot.add_glyph(source, correlation_glyph)
+        target = plot.add_glyph(source, target_glyph)
+        hedge = plot.add_glyph(source, hedge_glyph)
+        # Add the tools
+        tooltips = [
+            ("Date", "@Date"),
+            ("Correlation", "@Correlation"),
+            ("Target", "@Target"),
+            ("Hedge", "@Hedge")
+        ]
+        correlation_hover_tool = HoverTool(renderers=[correlation], tooltips=tooltips)
+        target_hover_tool = HoverTool(renderers=[target], tooltips=tooltips)
+        hedge_hover_tool = HoverTool(renderers=[hedge], tooltips=tooltips)
+        select_tool = BoxSelectTool(renderers=[target, hedge, correlation], dimensions='width')
+        plot.add_tools(target_hover_tool, hedge_hover_tool, correlation_hover_tool, select_tool)
+        return plot
+
+    @staticmethod
     def make_correlation_datatable(correl_df):
+        """
+        the input datframe must have columns ['Target (as string)', 'Hedge (as string)', 'Correlation ( as float )']
+        :param correl_df:
+        :return:
+        """
         correl_df.reset_index(inplace=True)
         source = ColumnDataSource(correl_df)
         target_ts_asset = sorted(correl_df["Target"].unique())
@@ -28,7 +116,6 @@ class ExtendDataTable:
                         formatter=StringFormatter(font_style="bold", text_color='blue')),
             TableColumn(field="Correlation", title="Correlation",
                         formatter=StringFormatter(font_style="bold", text_color='darkgreen'))
-
         ]
         data_table = DataTable(source=source, columns=columns, editable=False, width=1000)
         plot = Plot(title=Title(text="Correlations, Target vs. Hedge Timeseries)", align="center"),

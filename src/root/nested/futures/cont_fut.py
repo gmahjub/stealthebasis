@@ -2369,8 +2369,6 @@ def vx_roll_adjust_from_csv(unadj_csv_file, rollover_days=5, number_of_cont_cont
     px_type_list = ['Open.', 'High.', 'Low.', 'Close.', 'Settle.']
     cont_ts_list = []
     for contract_cnt in range(number_of_cont_contracts + 1):
-        new_col_nms_front_month = [col_nm + str(contract_cnt) for col_nm in usecols_list]
-        new_col_nms_back_month = [col_nm + str(contract_cnt + 1) for col_nm in usecols_list]
         px_type_list_front_month = [col_nm + str(contract_cnt) for col_nm in px_type_list]
         px_type_list_back_month = [col_nm + str(contract_cnt + 1) for col_nm in px_type_list]
         new_col_nms = new_col_nms_front_month + new_col_nms_back_month

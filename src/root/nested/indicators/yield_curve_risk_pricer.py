@@ -31,7 +31,6 @@ HTML_FILES_DIR = "workspace/data/bokeh/html/"
 SEABORN_PNG_FILES_DIR = "/workspace/data/seaborn/png/"
 TRACK_INDEX_NOMINAL_POINT_YIELD_SPREAD_CSV = \
     OSMuxImpl.get_proper_path(TRACK_INDEX_NOMINAL_POINT_YIELD_SPREAD_CSV) + "tpyls.csv"
-print(TRACK_INDEX_NOMINAL_POINT_YIELD_SPREAD_CSV)
 """ Get bond price from YTM """
 
 

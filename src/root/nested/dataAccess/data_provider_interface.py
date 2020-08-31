@@ -19,17 +19,20 @@ header = {
 sp500_req_url = "https://etfdailynews.com/etf/spy/"
 nq100_req_url = "https://etfdailynews.com/etf/qqq/"
 dow30_req_url = "https://etfdailynews.com/etf/dia/"
+russell2000_req_url = "https://etfdailynews.com/etf/iwm/"
 r_sp = requests.get(sp500_req_url, headers=header)
 r_nq = requests.get(nq100_req_url, headers=header)
 r_dow = requests.get(dow30_req_url, headers=header)
+r_r2k = requests.get(russell2000_req_url, headers=header)
 SP500_HOLDINGS_URL = pd.read_html(r_sp.text, attrs={'id': 'etfs-that-own'})
 NQ100_HOLDINGS_URL = pd.read_html(r_nq.text, attrs={'id': 'etfs-that-own'})
 DOW30_HOLDINGS_URL = pd.read_html(r_dow.text, attrs={'id': 'etfs-that-own'})
+R2K_HOLDINGS_URL = pd.read_html(r_r2k.text, attrs={'id': 'etfs-that-own'})
 RUSSELL1000_HOLDINGS_URL = "https://www.ishares.com/us/products/239707/ishares-russell-1000" \
                            "-etf/1467271812596.ajax?fileType=csv&fileName=IWB_holdings&dataType=fund"
 RUSSELL3000_HOLDINGS_URL = "https://www.ishares.com/us/products/239714/ishares-russell-3000" \
                            "-etf/1467271812596.ajax?fileType=csv&fileName=IWV_holdings&dataType=fund"
-MAIN_INDICES_LIST = ['SP500', 'NQ100', 'DOW30']
+MAIN_INDICES_LIST = ['SP500', 'NQ100', 'DOW30', 'R2K']
 
 
 class DataProviderInterface(object):
@@ -90,9 +93,18 @@ class DataProviderInterface(object):
         except FileNotFoundError:
             last_time_dow_30_stock_universe_file_modified = ""
 
+        russ_2k_stock_universe = 'R2K'
+        self.total_pwd_r2k = self.local_stock_universe_file_pwd + \
+                             russ_2k_stock_universe + self.stock_universe_file_type
+        try:
+            last_time_r2k_stock_universe_file_modified = os.path.getmtime(self.total_pwd_r2k)
+        except FileNotFoundError:
+            last_time_r2k_stock_universe_file_modified = ""
+
         self.last_modified_times = {stock_universe_file_name: last_time_stock_universe_file_modified,
                                     russell_3000_stock_universe: last_time_russell_3000_stock_universe_file_modified,
                                     russell_1000_stock_universe: last_time_russell_1000_stock_universe_file_modified,
+                                    russ_2k_stock_universe: last_time_r2k_stock_universe_file_modified,
                                     nq_100_stock_universe: last_time_nq_100_stock_universe_file_modified,
                                     sp_500_stock_universe: last_time_sp_500_stock_universe_file_modified,
                                     dow_30_stock_universe: last_time_dow_30_stock_universe_file_modified}
@@ -100,6 +112,7 @@ class DataProviderInterface(object):
         self.stock_universe_download_func = {stock_universe_file_name: self.download_stock_universe,
                                              russell_1000_stock_universe: self.download_russell_1000_stock_universe,
                                              russell_3000_stock_universe: self.download_russell_3000_stock_universe,
+                                             russ_2k_stock_universe: self.download_r2k_holdings_symbol_list,
                                              nq_100_stock_universe: self.download_nq100_holdings_symbol_list,
                                              sp_500_stock_universe: self.download_sp500_holdings_symbol_list,
                                              dow_30_stock_universe: self.download_dow30_holdings_symbol_list}
@@ -183,6 +196,17 @@ class DataProviderInterface(object):
         the_df['BenchmarkFuture'] = 'YM'
         the_df.to_csv(self.total_pwd_dow30)
         return the_df, dow30
+
+    def download_r2k_holdings_symbol_list(self):
+        url = R2K_HOLDINGS_URL
+        r2k = [x for x in url[0].Symbol.values.tolist() if isinstance(x, str)]
+        url[0].set_index("Symbol", inplace=True)
+        the_df = url[0].rename(columns={"Holding Name": "name"})
+        the_df['BenchmarkIndex'] = 'RUT'
+        the_df['BenchmarkETF'] = 'IWM'
+        the_df['BenchmarkFuture'] = 'RTY'
+        the_df.to_csv(self.total_pwd_r2k)
+        return the_df, r2k
 
     def get_stock_universe_file_as_df(self,
                                       stock_universe_filename):
