@@ -1457,61 +1457,124 @@ def cl_curve_to_db_vectorized(row):
         one date. This is a VECTORIZED function. The input is a row of a dataframe.
         """
     default_cl_px = 1000.0
+    for col_nm in row.index:
+        if np.isnan(float(row[col_nm])):
+            row[col_nm] = default_cl_px
     identifier = row.name.to_pydatetime()
     # Id
     # identifier = df.loc['d:Id']['$']
     # ED1 - settle price
     merged_cl1_settle = float(row.loc['MERGED_CL1_SETTLE'])
+    #if np.isnan(merged_cl1_settle):
+    #    LOGGER.error("cont_fut.cl_curve_to_db_vectorized():merged_cl1_settle is NAN! %s", str(merged_cl1_settle))
+    #    LOGGER.info("cont_fut.cl_curve_to_db_vectorized(): merged_cl1_settle is NAN, setting value to "
+    #                "default_cl_price %s", str(default_cl_px))
+    #    merged_cl1_settle = default_cl_px
     # ED2 - settle price
     merged_cl2_settle = float(row.loc['MERGED_CL2_SETTLE'])
+    if np.isnan(merged_cl2_settle):
+        LOGGER.error("cont_fut.cl_curve_to_db_vectorized():merged_cl2_settle is NAN! %s", str(merged_cl2_settle))
+        LOGGER.info("cont_fut.cl_curve_to_db_vectorized(): merged_cl2_settle is NAN, setting value to "
+                    "default_cl_price %s", str(default_cl_px))
+        merged_cl2_settle = default_cl_px
     # ED3 - settle price
     try:
         merged_cl3_settle = float(row.loc['MERGED_CL3_SETTLE'])
+        if np.isnan(merged_cl3_settle):
+            LOGGER.error("cont_fut.cl_curve_to_db_vectorized():merged_cl3_settle is NAN! %s", str(merged_cl3_settle))
+            LOGGER.info("cont_fut.cl_curve_to_db_vectorized(): merged_cl3_settle is NAN, setting value to "
+                        "default_cl_price %s", str(default_cl_px))
+            merged_cl3_settle = default_cl_px
     except KeyError:
         merged_cl3_settle = default_cl_px
     # ED4 - settle price
     try:
         merged_cl4_settle = float(row.loc['MERGED_CL4_SETTLE'])
+        if np.isnan(merged_cl4_settle):
+            LOGGER.error("cont_fut.cl_curve_to_db_vectorized():merged_cl4_settle is NAN! %s", str(merged_cl4_settle))
+            LOGGER.info("cont_fut.cl_curve_to_db_vectorized(): merged_cl4_settle is NAN, setting value to "
+                        "default_cl_price %s", str(default_cl_px))
+            merged_cl4_settle = default_cl_px
     except KeyError:
         merged_cl4_settle = default_cl_px
     # ED5 - settle price
     try:
         merged_cl5_settle = float(row.loc['MERGED_CL5_SETTLE'])
+        if np.isnan(merged_cl5_settle):
+            LOGGER.error("cont_fut.cl_curve_to_db_vectorized():merged_cl5_settle is NAN! %s", str(merged_cl5_settle))
+            LOGGER.info("cont_fut.cl_curve_to_db_vectorized(): merged_cl5_settle is NAN, setting value to "
+                        "default_cl_price %s", str(default_cl_px))
+            merged_cl5_settle = default_cl_px
     except KeyError:
         merged_cl5_settle = default_cl_px
     # ED6 - settle price
     try:
         merged_cl6_settle = float(row.loc['MERGED_CL6_SETTLE'])
+        if np.isnan(merged_cl6_settle):
+            LOGGER.error("cont_fut.cl_curve_to_db_vectorized():merged_cl6_settle is NAN! %s", str(merged_cl6_settle))
+            LOGGER.info("cont_fut.cl_curve_to_db_vectorized(): merged_cl6_settle is NAN, setting value to "
+                        "default_cl_price %s", str(default_cl_px))
+            merged_cl6_settle = default_cl_px
     except KeyError:
         merged_cl6_settle = default_cl_px
     # ED7 - settle price
     try:
         merged_cl7_settle = float(row.loc['MERGED_CL7_SETTLE'])
+        if np.isnan(merged_cl7_settle):
+            LOGGER.error("cont_fut.cl_curve_to_db_vectorized():merged_cl7_settle is NAN! %s", str(merged_cl7_settle))
+            LOGGER.info("cont_fut.cl_curve_to_db_vectorized(): merged_cl7_settle is NAN, setting value to "
+                        "default_cl_price %s", str(default_cl_px))
+            merged_cl7_settle = default_cl_px
     except KeyError:
         merged_cl7_settle = default_cl_px
     # ED8 - settle price
     try:
         merged_cl8_settle = float(row.loc['MERGED_CL8_SETTLE'])
+        if np.isnan(merged_cl8_settle):
+            LOGGER.error("cont_fut.cl_curve_to_db_vectorized():merged_cl8_settle is NAN! %s", str(merged_cl8_settle))
+            LOGGER.info("cont_fut.cl_curve_to_db_vectorized(): merged_cl8_settle is NAN, setting value to "
+                        "default_cl_price %s", str(default_cl_px))
+            merged_cl8_settle = default_cl_px
     except KeyError:
         merged_cl8_settle = default_cl_px
     # ED9 - settle price
     try:
         merged_cl9_settle = float(row.loc['MERGED_CL9_SETTLE'])
+        if np.isnan(merged_cl9_settle):
+            LOGGER.error("cont_fut.cl_curve_to_db_vectorized():merged_cl9_settle is NAN! %s", str(merged_cl9_settle))
+            LOGGER.info("cont_fut.cl_curve_to_db_vectorized(): merged_cl9_settle is NAN, setting value to "
+                        "default_cl_price %s", str(default_cl_px))
+            merged_cl9_settle = default_cl_px
     except KeyError:
         merged_cl9_settle = default_cl_px
     # ED10 - settle price
-    try:
+    try: 
         merged_cl10_settle = float(row.loc['MERGED_CL10_SETTLE'])
+        if np.isnan(merged_cl10_settle):
+            LOGGER.error("cont_fut.cl_curve_to_db_vectorized():merged_cl10_settle is NAN! %s", str(merged_cl10_settle))
+            LOGGER.info("cont_fut.cl_curve_to_db_vectorized(): merged_cl10_settle is NAN, setting value to "
+                        "default_cl_price %s", str(default_cl_px))
+            merged_cl10_settle = default_cl_px
     except KeyError:
         merged_cl10_settle = default_cl_px
     # ED11 - settle price
     try:
         merged_cl11_settle = float(row.loc['MERGED_CL11_SETTLE'])
+        if np.isnan(merged_cl11_settle):
+            LOGGER.error("cont_fut.cl_curve_to_db_vectorized():merged_cl11_settle is NAN! %s", str(merged_cl11_settle))
+            LOGGER.info("cont_fut.cl_curve_to_db_vectorized(): merged_cl11_settle is NAN, setting value to "
+                        "default_cl_price %s", str(default_cl_px))
+            merged_cl11_settle = default_cl_px
     except KeyError:
         merged_cl11_settle = default_cl_px
     # ED12 - settle price
     try:
         merged_cl12_settle = float(row.loc['MERGED_CL12_SETTLE'])
+        if np.isnan(merged_cl12_settle):
+            LOGGER.error("cont_fut.cl_curve_to_db_vectorized():merged_cl12_settle is NAN! %s", str(merged_cl12_settle))
+            LOGGER.info("cont_fut.cl_curve_to_db_vectorized(): merged_cl12_settle is NAN, setting value to "
+                        "default_cl_price %s", str(default_cl_px))
+            merged_cl12_settle = default_cl_px
     except KeyError:
         merged_cl12_settle = default_cl_px
     # ED13 - settle price
@@ -1741,31 +1804,103 @@ def equity_futures_to_db_vectorized(row, roll_type, asset_type="EQUITIES"):
     equity_futures_curve_to_db_vectorized(df) takes a row series that contains curve entry for
     one date. This is a VECTORIZED function. The input is a row of a dataframe.
     """
+    default_equity_curr_futures_px = 0.0
     identifier = row.name.to_pydatetime()
     near_month_settle_extract = col_header_filter("NEAR_MONTH_SETTLE", row.index)[0]
     symbol = near_month_settle_extract.split("_")[2]
     near_month_settle = float(row.loc[near_month_settle_extract])
     back_month_settle = float(row.loc[col_header_filter('BACK_MONTH_SETTLE', row.index)[0]])
     near_month_open = float(row.loc[col_header_filter('NEAR_MONTH_OPEN', row.index)[0]])
+    if np.isnan(near_month_open):
+        LOGGER.error("cont_fut.equity_futures_to_db_vectorized():near_month_open is NAN! %s", str(near_month_open))
+        LOGGER.info("cont_fut.equity_futures_to_db_vectorized(): near_month_open is NAN, setting value to "
+                    "default_equity_futures_price %s", str(default_equity_curr_futures_px))
+        near_month_open = default_equity_curr_futures_px
     back_month_open = float(row.loc[col_header_filter('BACK_MONTH_OPEN', row.index)[0]])
+    if np.isnan(back_month_open):
+        LOGGER.error("cont_fut.equity_futures_to_db_vectorized():back_month_open is NAN! %s", str(back_month_open))
+        LOGGER.info("cont_fut.equity_futures_to_db_vectorized(): back_month_open is NAN, setting value to "
+                    "default_equity_futures_price %s", str(default_equity_curr_futures_px))
+        back_month_open = default_equity_curr_futures_px
     near_month_high = float(row.loc[col_header_filter('NEAR_MONTH_HIGH', row.index)[0]])
+    if np.isnan(near_month_high):
+        LOGGER.error("cont_fut.equity_futures_to_db_vectorized():near_month_high is NAN! %s", str(near_month_high))
+        LOGGER.info("cont_fut.equity_futures_to_db_vectorized(): near_month_high is NAN, setting value to "
+                    "default_equity_futures_price %s", str(default_equity_curr_futures_px))
+        near_month_high = default_equity_curr_futures_px
     back_month_high = float(row.loc[col_header_filter('BACK_MONTH_HIGH', row.index)[0]])
+    if np.isnan(back_month_high):
+        LOGGER.error("cont_fut.equity_futures_to_db_vectorized():back_month_high is NAN! %s", str(back_month_high))
+        LOGGER.info("cont_fut.equity_futures_to_db_vectorized(): back_month_high is NAN, setting value to "
+                    "default_equity_futures_price %s", str(default_equity_curr_futures_px))
+        back_month_high = default_equity_curr_futures_px
     near_month_low = float(row.loc[col_header_filter('NEAR_MONTH_LOW', row.index)[0]])
+    if np.isnan(near_month_low):
+        LOGGER.error("cont_fut.equity_futures_to_db_vectorized():near_month_low is NAN! %s", str(near_month_low))
+        LOGGER.info("cont_fut.equity_futures_to_db_vectorized(): near_month_low is NAN, setting value to "
+                    "default_equity_futures_price %s", str(default_equity_curr_futures_px))
+        near_month_low = default_equity_curr_futures_px
     back_month_low = float(row.loc[col_header_filter('BACK_MONTH_LOW', row.index)[0]])
+    if np.isnan(back_month_low):
+        LOGGER.error("cont_fut.equity_futures_to_db_vectorized():back_month_low is NAN! %s", str(back_month_low))
+        LOGGER.info("cont_fut.equity_futures_to_db_vectorized(): back_month_low is NAN, setting value to "
+                    "default_equity_futures_price %s", str(default_equity_curr_futures_px))
+        back_month_low = default_equity_curr_futures_px
     near_month_last = float(row.loc[col_header_filter('NEAR_MONTH_LAST', row.index)[0]])
+    if np.isnan(near_month_last):
+        LOGGER.error("cont_fut.equity_futures_to_db_vectorized():near_month_last is NAN! %s", str(near_month_last))
+        LOGGER.info("cont_fut.equity_futures_to_db_vectorized(): near_month_last is NAN, setting value to "
+                    "default_equity_futures_price %s", str(default_equity_curr_futures_px))
+        near_month_last = default_equity_curr_futures_px
     back_month_last = float(row.loc[col_header_filter('BACK_MONTH_LAST', row.index)[0]])
+    if np.isnan(back_month_last):
+        LOGGER.error("cont_fut.equity_futures_to_db_vectorized():back_month_last is NAN! %s", str(back_month_last))
+        LOGGER.info("cont_fut.equity_futures_to_db_vectorized(): back_month_last is NAN, setting value to "
+                    "default_equity_futures_price %s", str(default_equity_curr_futures_px))
+        back_month_last = default_equity_curr_futures_px
     near_month_volume = float(row.loc[col_header_filter('NEAR_MONTH_VOLUME', row.index)[0]])
     back_month_volume = float(row.loc[col_header_filter('BACK_MONTH_VOLUME', row.index)[0]])
     near_month_open_interest = float(row.loc[col_header_filter('NEAR_MONTH_PREVIOUS_DAY_OPEN_INTEREST', row.index)[0]])
     back_month_open_interest = float(row.loc[col_header_filter('BACK_MONTH_PREVIOUS_DAY_OPEN_INTEREST', row.index)[0]])
     merged_settle = float(row.loc[col_header_filter('MERGED_SETTLE', row.index)[0]])
     merged_open = float(row.loc[col_header_filter('MERGED_OPEN', row.index)[0]])
+    if np.isnan(merged_open):
+        LOGGER.error("cont_fut.equity_futures_to_db_vectorized():merged_open is NAN! %s", str(merged_open))
+        LOGGER.info("cont_fut.equity_futures_to_db_vectorized(): mreged_open is NAN, setting value to "
+                    "default_equity_futures_price %s", str(default_equity_curr_futures_px))
+        merged_open = default_equity_curr_futures_px
     merged_high = float(row.loc[col_header_filter('MERGED_HIGH', row.index)[0]])
+    if np.isnan(merged_high):
+        LOGGER.error("cont_fut.equity_futures_to_db_vectorized():merged_high is NAN! %s", str(merged_high))
+        LOGGER.info("cont_fut.equity_futures_to_db_vectorized(): mreged_high is NAN, setting value to "
+                    "default_equity_futures_price %s", str(default_equity_curr_futures_px))
+        merged_high = default_equity_curr_futures_px
     merged_low = float(row.loc[col_header_filter('MERGED_LOW', row.index)[0]])
+    if np.isnan(merged_low):
+        LOGGER.error("cont_fut.equity_futures_to_db_vectorized():merged_low is NAN! %s", str(merged_low))
+        LOGGER.info("cont_fut.equity_futures_to_db_vectorized(): merged_low is NAN, setting value to "
+                    "default_equity_futures_price %s", str(default_equity_curr_futures_px))
+        merged_low = default_equity_curr_futures_px
     merged_last = float(row.loc[col_header_filter('MERGED_LAST', row.index)[0]])
+    if np.isnan(merged_last):
+        LOGGER.error("cont_fut.equity_futures_to_db_vectorized():merged_last is NAN! %s", str(merged_last))
+        LOGGER.info("cont_fut.equity_futures_to_db_vectorized(): mreged_last is NAN, setting value to "
+                    "default_equity_futures_price %s", str(default_equity_curr_futures_px))
+        merged_last = default_equity_curr_futures_px
     merged_volume = float(row.loc[col_header_filter('MERGED_VOLUME', row.index)[0]])
+    if np.isnan(merged_volume):
+        LOGGER.error("cont_fut.equity_futures_to_db_vectorized():merged_volume is NAN! %s", str(merged_volume))
+        LOGGER.info("cont_fut.equity_futures_to_db_vectorized(): mreged_volume is NAN, setting value to "
+                    "default_equity_futures_price %s", str(default_equity_curr_futures_px))
+        merged_volume = default_equity_curr_futures_px
     merged_previous_day_open_interest = float(row.loc[col_header_filter('MERGED_PREVIOUS_DAY_OPEN_INTEREST',
                                                                         row.index)[0]])
+    if np.isnan(merged_previous_day_open_interest):
+        LOGGER.error("cont_fut.equity_futures_to_db_vectorized():merged_previous_day_open_interest is NAN! %s",
+                     str(merged_previous_day_open_interest))
+        LOGGER.info("cont_fut.equity_futures_to_db_vectorized(): mreged_previous_day_open_interest"
+                    " is NAN, setting value to default_equity_futures_price %s", str(default_equity_curr_futures_px))
+        merged_previous_day_open_interest = default_equity_curr_futures_px
     adj_factor_settle = float(row.loc[col_header_filter('adj_factor_SETTLE', row.index)[0]])
     adj_factor_open = float(row.loc[col_header_filter('adj_factor_OPEN', row.index)[0]])
     adj_factor_high = float(row.loc[col_header_filter('adj_factor_HIGH', row.index)[0]])
@@ -2411,6 +2546,8 @@ def vx_roll_adjust_from_csv(unadj_csv_file, rollover_days=5, number_of_cont_cont
     px_type_list = ['Open.', 'High.', 'Low.', 'Close.', 'Settle.']
     cont_ts_list = []
     for contract_cnt in range(number_of_cont_contracts + 1):
+        new_col_nms_front_month = [col_nm + str(contract_cnt) for col_nm in usecols_list]
+        new_col_nms_back_month = [col_nm + str(contract_cnt + 1) for col_nm in usecols_list]
         px_type_list_front_month = [col_nm + str(contract_cnt) for col_nm in px_type_list]
         px_type_list_back_month = [col_nm + str(contract_cnt + 1) for col_nm in px_type_list]
         new_col_nms = new_col_nms_front_month + new_col_nms_back_month
